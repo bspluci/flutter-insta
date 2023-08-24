@@ -17,7 +17,7 @@ class PostUpload extends StatefulWidget {
 }
 
 class _PostUploadState extends State<PostUpload> {
-  String writerId = '641422cdafc7faa9f6a674d0';
+  String writerId = '8vXQ3IcmcgqFTlk2BAXq';
   String writer = '박정호';
   String title = '';
   String content = '';

@@ -314,7 +314,8 @@ class _PostListState extends State<PostList> {
                               //       const Duration(milliseconds: 200),
                               // ));
                               CupertinoPageRoute(
-                                builder: (c) => const userprofile.UserProfile(),
+                                builder: (c) => userprofile.UserProfile(
+                                    userId: widget.postData[idx]["writerId"]),
                               ),
                             );
                           },

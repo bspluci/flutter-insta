@@ -4,10 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import 'notification.dart';
 
 final FirebaseStorage _storage = FirebaseStorage.instance;
+final FirebaseAuth _auth = FirebaseAuth.instance;
 
 class PostUpload extends StatefulWidget {
   const PostUpload({Key? key}) : super(key: key);
@@ -130,9 +132,18 @@ class _PostUploadState extends State<PostUpload> {
   //   Navigator.of(context).pushNamed('/');
   // }
 
+  // 사용자 로그인 체크
+  void chackLogin() async {
+    if (_auth.currentUser == null) {
+      await showNotification(0, '로그인 필요', '로그인이 필요한 서비스입니다.');
+      Navigator.of(context).pushNamed('/login');
+    }
+  }
+
   @override
   void initState() {
     super.initState();
+    chackLogin();
   }
 
   @override

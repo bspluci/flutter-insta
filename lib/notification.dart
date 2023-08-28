@@ -97,7 +97,7 @@ showNotificationTime() async {
 showInvalidInputNotification(BuildContext context, String message) {
   ScaffoldMessenger.of(context).showSnackBar(
     SnackBar(
-      duration: const Duration(seconds: 3), // 알림이 화면에 표시되는 기간을 지정합니다.
+      duration: const Duration(seconds: 5), // 알림이 화면에 표시되는 기간을 지정합니다.
       content: Text(message),
       action: SnackBarAction(
         label: '확인',

@@ -17,10 +17,16 @@ class Shop extends StatefulWidget {
 class _ShopState extends State<Shop> {
   dynamic productList;
 
+  void setTitleText() {
+    Provider.of<AppBarTitle>(context, listen: false).setTitle('Shop');
+  }
+
   @override
   void initState() {
     super.initState();
     _fetchData(); // 데이터 가져오는 비동기 함수 호출
+
+    Future.delayed(Duration.zero, setTitleText);
   }
 
   Future<void> _fetchData() async {
@@ -54,21 +60,21 @@ class _ShopState extends State<Shop> {
     final store = Provider.of<DataProvider>(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('SHOP'),
-        automaticallyImplyLeading: false,
-        actions: [
-          IconButton(
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                  builder: (context) =>
-                      AddShopItem(fetchData: _fetchData, itemState: 'ADD')),
-            ),
-            icon: const Icon(Icons.add),
-          ),
-        ],
-      ),
+      // appBar: AppBar(
+      //   title: const Text('SHOP'),
+      //   automaticallyImplyLeading: false,
+      //   actions: [
+      //     IconButton(
+      //       onPressed: () => Navigator.push(
+      //         context,
+      //         MaterialPageRoute(
+      //             builder: (context) =>
+      //                 AddShopItem(fetchData: _fetchData, itemState: 'ADD')),
+      //       ),
+      //       icon: const Icon(Icons.add),
+      //     ),
+      //   ],
+      // ),
       body: productList == null
           ? const Center(child: CircularProgressIndicator())
           : (productList.isNotEmpty
@@ -150,6 +156,14 @@ class _AddShopItemState extends State<AddShopItem> {
       _nameController.text = widget.itemData['name'];
       _priceController.text = widget.itemData['price'].toString();
     }
+
+    // 앱 바의 제목 변경
+    void setTitleText() {
+      Provider.of<AppBarTitle>(context, listen: false)
+          .setTitle('${widget.itemState} SHOP ITEM');
+    }
+
+    Future.delayed(Duration.zero, setTitleText);
   }
 
   @override

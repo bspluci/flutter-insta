@@ -11,6 +11,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import 'text/vision_detector_views/text_detector_view.dart';
 import 'style.dart' as style;
@@ -18,9 +19,13 @@ import 'postUpload.dart' as postpublish;
 import 'userProfile.dart' as userprofile;
 import 'provider.dart';
 import 'notification.dart';
-import 'shop.dart';
+import 'shop.dart' as shop;
+import 'regester.dart' as regester;
+import 'login.dart';
+import 'myInfo.dart' as myinfo;
 
 final firestore = FirebaseFirestore.instance;
+final _auth = FirebaseAuth.instance;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -31,6 +36,8 @@ void main() async {
   runApp(MultiProvider(
     providers: [
       ChangeNotifierProvider(create: (context) => DataProvider()),
+      ChangeNotifierProvider(create: (context) => UserProvider()),
+      ChangeNotifierProvider(create: (context) => AppBarTitle()),
     ],
     child: MaterialApp(
       theme: style.theme,
@@ -39,7 +46,7 @@ void main() async {
       routes: {
         '/': (context) => const MyApp(),
         '/text': (context) => TextRecognizerView(),
-        '/shop': (context) => const Shop(),
+        '/login': (context) => const Login(),
         '/post/publish': (context) => const postpublish.PostUpload(),
       },
     ),
@@ -162,29 +169,41 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
+    final user = Provider.of<UserProvider>(context).user;
+    final logout = Provider.of<UserProvider>(context).logout;
+    final title = Provider.of<AppBarTitle>(context);
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Instagram"),
+        // 타이틀 좌측정렬
+        centerTitle: false,
+        title: Text(title.title),
         actions: [
           IconButton(
-            icon: const Icon(Icons.text_snippet_rounded),
+            iconSize: 25,
+            icon: Icon(user == null ? Icons.login : Icons.logout),
+            onPressed: () {
+              user == null
+                  ? Navigator.pushNamed(context, '/login')
+                  : logout(context);
+            },
+          ),
+          IconButton(
+            iconSize: 25,
+            icon: const Icon(Icons.text_snippet_outlined),
             onPressed: () {
               Navigator.pushNamed(context, '/text');
             },
           ),
           IconButton(
-            icon: const Icon(Icons.card_giftcard_outlined),
-            onPressed: () {
-              Navigator.pushNamed(context, '/shop');
-            },
-          ),
-          IconButton(
             icon: const Icon(Icons.add_box_outlined),
             onPressed: () {
-              // Navigator.push(context,
-              //   MaterialPageRoute(builder: (context) => const postPublish())
-              // );
-              Navigator.pushNamed(context, '/post/publish');
+              if (_auth.currentUser == null || _auth.currentUser!.uid == null) {
+                Navigator.pushNamed(context, '/login');
+                return;
+              } else {
+                Navigator.pushNamed(context, '/post/publish');
+              }
             },
           ),
         ],
@@ -195,7 +214,8 @@ class _MyAppState extends State<MyApp> {
             postData: postData,
             getPostList: getPostList,
             parentLoading: parentLoading),
-        const SizedBox(child: Text("샵 페이지")),
+        const shop.Shop(),
+        user == null ? const regester.Regester() : const myinfo.MyInfo(),
       ][tabIndex],
       bottomNavigationBar: BottomNavigationBar(
         showSelectedLabels: false,
@@ -203,14 +223,21 @@ class _MyAppState extends State<MyApp> {
         unselectedItemColor: Colors.black,
         selectedItemColor: Colors.black,
         onTap: (value) => setState(() => tabIndex = value),
-        items: const [
-          BottomNavigationBarItem(
-              icon: Icon(
-                Icons.home_outlined,
-              ),
-              label: 'home'),
-          BottomNavigationBarItem(
+        items: [
+          const BottomNavigationBarItem(
+              icon: Icon(Icons.home_outlined), label: 'home'),
+          const BottomNavigationBarItem(
               icon: Icon(Icons.shopping_bag_outlined), label: 'bag'),
+          if (user != null)
+            const BottomNavigationBarItem(
+              icon: Icon(Icons.person_outlined),
+              label: 'info',
+            )
+          else
+            const BottomNavigationBarItem(
+              icon: Icon(Icons.person_add_alt_1_outlined),
+              label: 'regester',
+            )
         ],
       ),
     );
@@ -237,9 +264,15 @@ class _PostListState extends State<PostList> {
   ScrollController scroll = ScrollController();
   bool isLoading = false;
 
+  // 앱 바의 제목 변경
+  void setTitleText() {
+    Provider.of<AppBarTitle>(context, listen: false).setTitle('HOME');
+  }
+
   @override
   void initState() {
     super.initState();
+    Future.delayed(Duration.zero, setTitleText);
     scroll.addListener(() {
       if (scroll.position.pixels == scroll.position.maxScrollExtent &&
           !isLoading) {

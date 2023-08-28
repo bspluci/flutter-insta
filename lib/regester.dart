@@ -1,0 +1,243 @@
+import 'dart:io';
+
+import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:provider/provider.dart';
+
+import 'provider.dart';
+import 'notification.dart';
+
+final FirebaseStorage _storage = FirebaseStorage.instance;
+
+class Regester extends StatefulWidget {
+  const Regester({Key? key}) : super(key: key);
+
+  @override
+  State<Regester> createState() => _RegesterState();
+}
+
+class _RegesterState extends State<Regester> {
+  String email = '';
+  String password = '';
+  String passwordRe = '';
+  String userName = '';
+  String? image;
+
+  bool isUploading = false;
+  File? userImage;
+  dynamic pickedFile;
+
+  // 앱 바의 제목 변경
+  void setTitleText() {
+    Provider.of<AppBarTitle>(context, listen: false).setTitle('REGESTER');
+  }
+
+  Future<void> selectImage() async {
+    final ImagePicker picker = ImagePicker();
+    pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    setState(() => userImage = File(pickedFile?.path ?? ''));
+  }
+
+  Future<dynamic> submitRegester(context) async {
+    if (email.isEmpty || password.isEmpty || passwordRe.isEmpty) {
+      return await showInvalidInputNotification(context, "회원정보를 입력해주세요.");
+    }
+    if (password != passwordRe) {
+      return await showInvalidInputNotification(context, "비밀번호가 다릅니다.");
+    }
+
+    // 게시물 업로드 중임을 표시
+    setState(() => isUploading = true);
+
+    if (userImage != null) {
+      final Reference storageRef = _storage.ref().child(
+          'userProfileImages/${DateTime.now()}.${userImage?.path.split('.').last}');
+      final UploadTask uploadTask = storageRef.putFile(File(pickedFile.path));
+
+      await uploadTask.whenComplete(() async {
+        image = await storageRef.getDownloadURL();
+      });
+    }
+
+    // 회원가입
+    try {
+      UserCredential userCredential =
+          await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      userCredential.user?.updateDisplayName(userName);
+      if (image != null) {
+        userCredential.user?.updatePhotoURL(image);
+      }
+
+      await showNotification(0, '회원가입 완료', '회원가입이 완료됐습니다.');
+
+      Navigator.pop(context, true);
+      Navigator.of(context).pushNamed('/');
+    } on FirebaseAuthException catch (e) {
+      setState(() => isUploading = false);
+
+      if (e.code == 'weak-password') {
+        return showInvalidInputNotification(context, '비밀번호가 너무 약합니다.');
+      } else if (e.code == 'email-already-in-use') {
+        return showInvalidInputNotification(context, '이미 사용중인 이메일입니다.');
+      }
+    } catch (e) {
+      print(e);
+    }
+
+    await Future.delayed(const Duration(milliseconds: 500));
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    Future.delayed(Duration.zero, setTitleText);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: isUploading
+          ? const Center(child: CircularProgressIndicator())
+          : SizedBox(
+              child: ListView(
+                children: [
+                  Center(
+                    child: Container(
+                        margin: const EdgeInsets.only(top: 50),
+                        child: const Text("회원가입",
+                            style:
+                                TextStyle(fontSize: 30, color: Colors.black))),
+                  ),
+                  Center(
+                    child: Container(
+                      child: userImage != null && userImage!.path != ''
+                          ? Image.file(
+                              userImage!,
+                              fit: BoxFit.cover,
+                              height: 250,
+                            )
+                          : const Text('No Image', style: TextStyle(height: 5)),
+                    ),
+                  ),
+                  Center(
+                    child: Container(
+                      margin: const EdgeInsets.only(right: 10),
+                      child: ElevatedButton(
+                        onPressed: () => selectImage(),
+                        child: const Text('회원 이미지 선택'),
+                      ),
+                    ),
+                  ),
+                  Center(
+                    child: Container(
+                      margin: const EdgeInsets.only(top: 20),
+                      child: FractionallySizedBox(
+                        widthFactor: 0.9,
+                        child: TextField(
+                          decoration: const InputDecoration(
+                            border: OutlineInputBorder(),
+                            labelText: '이메일',
+                          ),
+                          onChanged: (text) {
+                            setState(
+                              () => email = text,
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  ),
+                  Center(
+                    child: Container(
+                      margin: const EdgeInsets.only(top: 20),
+                      child: FractionallySizedBox(
+                        widthFactor: 0.9,
+                        child: TextField(
+                          decoration: const InputDecoration(
+                            border: OutlineInputBorder(),
+                            labelText: '비밀번호',
+                          ),
+                          onChanged: (text) {
+                            setState(
+                              () => password = text,
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  ),
+                  Center(
+                    child: Container(
+                      margin: const EdgeInsets.only(top: 20),
+                      child: FractionallySizedBox(
+                        widthFactor: 0.9,
+                        child: TextField(
+                          decoration: const InputDecoration(
+                            border: OutlineInputBorder(),
+                            labelText: '비밀번호 확인',
+                          ),
+                          onChanged: (text) {
+                            setState(
+                              () => passwordRe = text,
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  ),
+                  Center(
+                    child: Container(
+                      margin: const EdgeInsets.only(top: 20),
+                      child: FractionallySizedBox(
+                        widthFactor: 0.9,
+                        child: TextField(
+                          decoration: const InputDecoration(
+                            border: OutlineInputBorder(),
+                            labelText: '이름',
+                          ),
+                          onChanged: (text) {
+                            setState(
+                              () => userName = text,
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  ),
+                  Container(
+                    margin: const EdgeInsets.only(top: 20),
+                    child: Center(
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            margin: const EdgeInsets.only(right: 5),
+                            child: ElevatedButton(
+                              onPressed: () => submitRegester(context),
+                              child: const Text('회원가입'),
+                            ),
+                          ),
+                          //
+                          Container(
+                            margin: const EdgeInsets.only(left: 5),
+                            child: ElevatedButton(
+                              onPressed: () => Navigator.pop(context),
+                              child: const Text('취소'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+    );
+  }
+}

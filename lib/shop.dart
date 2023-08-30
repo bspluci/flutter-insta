@@ -15,7 +15,7 @@ class Shop extends StatefulWidget {
 }
 
 class _ShopState extends State<Shop> {
-  dynamic productList;
+  List<QueryDocumentSnapshot<Map<String, dynamic>>>? productList;
 
   void setTitleText() {
     Provider.of<AppBarTitle>(context, listen: false).setTitle('Shop');
@@ -77,9 +77,9 @@ class _ShopState extends State<Shop> {
       // ),
       body: productList == null
           ? const Center(child: CircularProgressIndicator())
-          : (productList.isNotEmpty
+          : (productList!.isNotEmpty
               ? ListView.builder(
-                  itemCount: productList.length,
+                  itemCount: productList!.length,
                   itemBuilder: (context, index) {
                     return GestureDetector(
                       onTap: () {
@@ -89,7 +89,7 @@ class _ShopState extends State<Shop> {
                             builder: (context) => AddShopItem(
                               fetchData: _fetchData,
                               itemState: 'EDIT',
-                              itemData: productList[index],
+                              itemData: productList![index],
                             ),
                           ),
                         );
@@ -100,19 +100,19 @@ class _ShopState extends State<Shop> {
                           mainAxisAlignment: MainAxisAlignment.start,
                           children: [
                             Text(
-                              '${productList[index]["name"]} : ',
+                              '${productList![index]["name"]} : ',
                               style: const TextStyle(
                                   color: Colors.black, fontSize: 19),
                             ),
                             Text(
                               store.addCommasToNumber(
-                                  productList[index]['price']),
+                                  productList![index]['price']),
                               style: const TextStyle(
                                   color: Colors.black, fontSize: 19),
                             ),
                             IconButton(
                                 onPressed: () {
-                                  _deleteItem(productList[index].id);
+                                  _deleteItem(productList![index].id);
                                 },
                                 icon: const Icon(Icons.close)),
                           ],

@@ -1,5 +1,3 @@
-import 'dart:io';
-import 'dart:io' show Platform;
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -128,24 +126,24 @@ class _MyAppState extends State<MyApp> {
     //       '통신 실패: ${response.statusCode} ERROR, ${jsonData['message']}');
     // }
 
-    const int _perPage = 2;
+    int perPage = 2;
     QuerySnapshot result;
 
-    await Future.delayed(Duration(seconds: 1));
+    await Future.delayed(const Duration(seconds: 1));
 
     try {
       if (postData.isEmpty) {
         result = await FirebaseFirestore.instance
             .collection('mainPosts')
             .orderBy('timestamp', descending: true)
-            .limit(_perPage)
+            .limit(perPage)
             .get();
       } else {
         result = await FirebaseFirestore.instance
             .collection('mainPosts')
             .orderBy('timestamp', descending: true)
             .startAfterDocument(postData.last)
-            .limit(_perPage)
+            .limit(perPage)
             .get();
       }
 
@@ -160,32 +158,50 @@ class _MyAppState extends State<MyApp> {
     setState(() => parentLoading = false);
   }
 
+  void setTitleText() {
+    Provider.of<AppBarTitle>(context, listen: false).setTitle('HOME');
+  }
+
+  void setUserInfoProvider() async {
+    final user = FirebaseAuth.instance.currentUser;
+    final userInfo = UserModel(
+      displayName: user?.displayName,
+      email: user?.email,
+      photoURL: user?.photoURL,
+      uid: user?.uid,
+    );
+
+    Provider.of<UserProvider>(context, listen: false).setUser(userInfo);
+  }
+
   @override
   void initState() {
     super.initState();
     initNotification(context);
     getPostListFromSharedPreferences();
+    Future.delayed(Duration.zero, setTitleText);
+    Future.delayed(Duration.zero, setUserInfoProvider);
   }
 
   @override
   Widget build(BuildContext context) {
-    final user = Provider.of<UserProvider>(context).user;
     final logout = Provider.of<UserProvider>(context).logout;
-    final title = Provider.of<AppBarTitle>(context);
+    final title = Provider.of<AppBarTitle>(context).title;
+    bool isLogin = _auth.currentUser != null;
 
     return Scaffold(
       appBar: AppBar(
         // 타이틀 좌측정렬
         centerTitle: false,
-        title: Text(title.title),
+        title: Text(title),
         actions: [
           IconButton(
             iconSize: 25,
-            icon: Icon(user == null ? Icons.login : Icons.logout),
+            icon: Icon(isLogin ? Icons.logout : Icons.login),
             onPressed: () {
-              user == null
-                  ? Navigator.pushNamed(context, '/login')
-                  : logout(context);
+              isLogin
+                  ? logout(context)
+                  : Navigator.pushNamed(context, '/login');
             },
           ),
           IconButton(
@@ -198,11 +214,10 @@ class _MyAppState extends State<MyApp> {
           IconButton(
             icon: const Icon(Icons.add_box_outlined),
             onPressed: () {
-              if (_auth.currentUser == null || _auth.currentUser!.uid == null) {
-                Navigator.pushNamed(context, '/login');
-                return;
-              } else {
+              if (isLogin) {
                 Navigator.pushNamed(context, '/post/publish');
+              } else {
+                Navigator.pushNamed(context, '/login');
               }
             },
           ),
@@ -215,7 +230,7 @@ class _MyAppState extends State<MyApp> {
             getPostList: getPostList,
             parentLoading: parentLoading),
         const shop.Shop(),
-        user == null ? const regester.Regester() : const myinfo.MyInfo(),
+        isLogin ? const myinfo.MyInfo() : const regester.Regester()
       ][tabIndex],
       bottomNavigationBar: BottomNavigationBar(
         showSelectedLabels: false,
@@ -228,7 +243,7 @@ class _MyAppState extends State<MyApp> {
               icon: Icon(Icons.home_outlined), label: 'home'),
           const BottomNavigationBarItem(
               icon: Icon(Icons.shopping_bag_outlined), label: 'bag'),
-          if (user != null)
+          if (isLogin)
             const BottomNavigationBarItem(
               icon: Icon(Icons.person_outlined),
               label: 'info',
@@ -313,9 +328,9 @@ class _PostListState extends State<PostList> {
                               fontWeight: FontWeight.bold),
                         )),
                   ),
-                  widget.postData[idx]['image'] != null &&
-                          widget.postData[idx]['image'] != ''
-                      ? Image.network(widget.postData[idx]['image'],
+                  widget.postData[idx]['contentImage'] != null &&
+                          widget.postData[idx]['contentImage'] != ''
+                      ? Image.network(widget.postData[idx]['contentImage'],
                           height: 300, fit: BoxFit.cover)
                       : const SizedBox(height: 300),
                   Container(
@@ -324,39 +339,73 @@ class _PostListState extends State<PostList> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('좋아요 ${widget.postData[idx]["like"]}',
-                            style: const TextStyle(color: Colors.black)),
-                        GestureDetector(
-                          child: Text('글쓴이 ${widget.postData[idx]["writer"]}',
-                              style: const TextStyle(color: Colors.black)),
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              // PageRouteBuilder(
-                              //   pageBuilder: (c, a1, a2) =>
-                              //       const userprofile.UserProfile(),
-                              //   transitionsBuilder: (c, a1, a2, child) =>
-                              //       // FadeTransition(opacity: a1, child: child),
-                              //       SlideTransition(
-                              //           position: Tween<Offset>(
-                              //             begin: const Offset(0.1, 0.0),
-                              //             end: Offset.zero,
-                              //           ).animate(a1),
-                              //           child: child),
-                              //   transitionDuration:
-                              //       const Duration(milliseconds: 200),
-                              // ));
-                              CupertinoPageRoute(
-                                builder: (c) => userprofile.UserProfile(
-                                    userId: widget.postData[idx]["writerId"]),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            GestureDetector(
+                              child: Row(
+                                children: [
+                                  Container(
+                                    margin: const EdgeInsets.only(right: 10),
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(15),
+                                      child: widget.postData[idx]
+                                                      ['writerPhoto'] !=
+                                                  null &&
+                                              widget.postData[idx]
+                                                      ['writerPhoto'] !=
+                                                  ''
+                                          ? Image.network(
+                                              widget.postData[idx]
+                                                  ['writerPhoto'],
+                                              width: 30,
+                                              height: 30,
+                                              fit: BoxFit.cover,
+                                            )
+                                          : const SizedBox(
+                                              width: 30, height: 30),
+                                    ),
+                                  ),
+                                  Text(widget.postData[idx]["writer"],
+                                      style: const TextStyle(
+                                          color: Colors.black, fontSize: 16)),
+                                ],
                               ),
-                            );
-                          },
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  // PageRouteBuilder(
+                                  //   pageBuilder: (c, a1, a2) =>
+                                  //       const userprofile.UserProfile(),
+                                  //   transitionsBuilder: (c, a1, a2, child) =>
+                                  //       // FadeTransition(opacity: a1, child: child),
+                                  //       SlideTransition(
+                                  //           position: Tween<Offset>(
+                                  //             begin: const Offset(0.1, 0.0),
+                                  //             end: Offset.zero,
+                                  //           ).animate(a1),
+                                  //           child: child),
+                                  //   transitionDuration:
+                                  //       const Duration(milliseconds: 200),
+                                  // ));
+                                  CupertinoPageRoute(
+                                    builder: (c) => userprofile.UserProfile(
+                                        userId: widget.postData[idx]
+                                            ["writerId"]),
+                                  ),
+                                );
+                              },
+                            ),
+                            Text('좋아요 ${widget.postData[idx]["like"]}',
+                                style: const TextStyle(color: Colors.black)),
+                          ],
                         ),
                         Container(
                           margin: const EdgeInsets.only(top: 15),
                           child: Text('${widget.postData[idx]["content"]}',
-                              style: const TextStyle(color: Colors.black)),
+                              style: const TextStyle(
+                                  color: Colors.black, fontSize: 16)),
                         )
                       ],
                     ),

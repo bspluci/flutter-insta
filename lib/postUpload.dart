@@ -5,8 +5,10 @@ import 'package:image_picker/image_picker.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:provider/provider.dart';
 
 import 'notification.dart';
+import 'provider.dart';
 
 final FirebaseStorage _storage = FirebaseStorage.instance;
 final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -19,11 +21,11 @@ class PostUpload extends StatefulWidget {
 }
 
 class _PostUploadState extends State<PostUpload> {
-  String writerId = '8vXQ3IcmcgqFTlk2BAXq';
-  String writer = '박정호';
+  String writerId = '';
+  String writer = '';
   String title = '';
   String content = '';
-  String image = '';
+  String contentImage = '';
   int like = 0;
 
   bool isUploading = false;
@@ -37,6 +39,8 @@ class _PostUploadState extends State<PostUpload> {
   }
 
   Future<void> uploadPost(context) async {
+    UserModel? user = Provider.of<UserProvider>(context, listen: false).user;
+
     if (content.isEmpty || title.isEmpty) {
       // Show a notification for invalid price input
       return await showInvalidInputNotification(context, "제목과 내용을 입력해주세요.");
@@ -50,16 +54,17 @@ class _PostUploadState extends State<PostUpload> {
     final UploadTask uploadTask = storageRef.putFile(File(pickedFile.path));
 
     await uploadTask.whenComplete(() async {
-      image = await storageRef.getDownloadURL();
+      contentImage = await storageRef.getDownloadURL();
     });
 
     // 파이어스토어에 게시물 업로드
     try {
       await FirebaseFirestore.instance.collection('mainPosts').add({
-        'image': image,
+        'contentImage': contentImage,
         'like': like,
-        'writerId': writerId,
-        'writer': writer,
+        'writerId': user?.uid,
+        'writer': user?.displayName,
+        'writerPhoto': user?.photoURL,
         'title': title,
         'content': content,
         'timestamp': DateTime.now(),
@@ -133,9 +138,9 @@ class _PostUploadState extends State<PostUpload> {
   // }
 
   // 사용자 로그인 체크
-  void chackLogin() async {
+  void chackLogin() {
     if (_auth.currentUser == null) {
-      await showNotification(0, '로그인 필요', '로그인이 필요한 서비스입니다.');
+      showNotification(0, '로그인 필요', '로그인이 필요한 서비스입니다.');
       Navigator.of(context).pushNamed('/login');
     }
   }

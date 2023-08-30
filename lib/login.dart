@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
@@ -17,10 +15,7 @@ class Login extends StatefulWidget {
 class _LoginState extends State<Login> {
   String email = '';
   String password = '';
-
   bool isLoading = false;
-  File? userImage;
-  dynamic pickedFile;
 
   Future<dynamic> memberLogin(context) async {
     if (email.isEmpty || password.isEmpty) {
@@ -39,8 +34,9 @@ class _LoginState extends State<Login> {
 
       final user = UserModel(
         uid: userCredential.user!.uid,
-        displayName: userCredential.user!.displayName ?? '',
-        email: userCredential.user!.email ?? '',
+        displayName: userCredential.user!.displayName,
+        email: userCredential.user!.email,
+        photoURL: userCredential.user!.photoURL,
       );
       Provider.of<UserProvider>(context, listen: false).setUser(user);
 
@@ -50,6 +46,7 @@ class _LoginState extends State<Login> {
       Navigator.pop(context, true);
       Navigator.of(context).pushNamed('/');
     } on FirebaseAuthException catch (e) {
+      print(e.code);
       setState(() => isLoading = false);
 
       if (e.code == 'user-not-found') {
@@ -81,7 +78,8 @@ class _LoginState extends State<Login> {
       ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
-          : SizedBox(
+          : Container(
+              margin: const EdgeInsets.only(top: 100),
               child: ListView(
                 children: [
                   Center(
@@ -122,7 +120,8 @@ class _LoginState extends State<Login> {
                       ),
                     ),
                   ),
-                  Center(
+                  Container(
+                    margin: const EdgeInsets.only(top: 20),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [

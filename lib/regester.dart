@@ -4,12 +4,15 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 
 import 'provider.dart';
 import 'notification.dart';
 
 final FirebaseStorage _storage = FirebaseStorage.instance;
+final FirebaseAuth auth = FirebaseAuth.instance;
+final FirebaseFirestore store = FirebaseFirestore.instance;
 
 class Regester extends StatefulWidget {
   const Regester({Key? key}) : super(key: key);
@@ -63,16 +66,23 @@ class _RegesterState extends State<Regester> {
 
     // 회원가입
     try {
-      UserCredential userCredential =
-          await FirebaseAuth.instance.createUserWithEmailAndPassword(
+      UserCredential userCredential = await auth.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
 
-      userCredential.user?.updateDisplayName(userName);
+      await userCredential.user?.updateDisplayName(userName);
       if (image != null) {
-        userCredential.user?.updatePhotoURL(image);
+        await userCredential.user?.updatePhotoURL(image);
       }
+
+      await store.collection('members').add({
+        'email': userCredential.user?.email,
+        'displayName': userName,
+        'photoURL': image,
+        'uid': userCredential.user?.uid,
+        'follower': 0,
+      });
 
       await showNotification(0, '회원가입 완료', '회원가입이 완료됐습니다.');
 
@@ -90,6 +100,7 @@ class _RegesterState extends State<Regester> {
       print(e);
     }
 
+    await auth.signOut();
     await Future.delayed(const Duration(milliseconds: 500));
   }
 

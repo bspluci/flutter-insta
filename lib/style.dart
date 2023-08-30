@@ -2,10 +2,9 @@ import 'package:flutter/material.dart';
 
 var theme = ThemeData(
   textButtonTheme: TextButtonThemeData(
-    style: TextButton.styleFrom(
-      backgroundColor: Colors.grey,
-    )
-  ),
+      style: TextButton.styleFrom(
+    backgroundColor: Colors.grey,
+  )),
   appBarTheme: const AppBarTheme(
     backgroundColor: Colors.white,
     titleTextStyle: TextStyle(color: Colors.black, fontSize: 25),

@@ -20,30 +20,29 @@ class _UserProfileState extends State<UserProfile> {
   List<dynamic> resultGallery = [];
   bool clickFollower = false;
 
-  @override
-  void initState() {
-    super.initState();
-    getUserInfo();
-    // WidgetsBinding.instance.addPostFrameCallback((_) {
-    //   Provider.of<DataProvider>(context, listen: false).getUserInfo();
-    // });
-  }
-
   getUserInfo() async {
+    print(widget.userId);
     try {
-      final result =
-          await firestore.collection('members').doc(widget.userId).get();
+      final result = await firestore
+          .collection('members')
+          .where('uid', isEqualTo: widget.userId)
+          .get();
+
+      final getUser = result.docs.map((e) => e.data()).toList()[0];
+
       setState(() {
-        resultUser = result.data()!;
+        resultUser = getUser;
+        print(resultUser);
       });
+
+      await getUserGallery();
+
       await showNotification(1, '유저 정보 로드 완료', '유저 정보가 성공적으로 로드되었습니다.');
     } catch (e) {
       print(e);
       await showNotification(
           1, '유저 정보 로드 실패', '유저 정보 로드에 실패하였습니다. 다시 시도해 주세요.');
     }
-
-    await getUserGallery();
   }
 
   getUserGallery() async {
@@ -54,7 +53,7 @@ class _UserProfileState extends State<UserProfile> {
           .orderBy('timestamp', descending: true)
           .get();
 
-      final gallery = result.docs.map((e) => e.data()['image']).toList();
+      final gallery = result.docs.map((e) => e.data()['contentImage']).toList();
 
       setState(() => resultGallery = gallery);
     } catch (e) {
@@ -64,9 +63,15 @@ class _UserProfileState extends State<UserProfile> {
 
   void incFollower() {
     setState(() {
-      clickFollower ? resultUser['follower']++ : resultUser['follower']--;
+      !clickFollower ? resultUser['follower']++ : resultUser['follower']--;
       clickFollower = !clickFollower;
     });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    getUserInfo();
   }
 
   @override
@@ -75,7 +80,7 @@ class _UserProfileState extends State<UserProfile> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(resultUser['userName'] ?? ''),
+        title: Text(resultUser['displayName'] ?? ''),
         automaticallyImplyLeading: false,
       ),
       body: resultUser.isNotEmpty && resultGallery.isNotEmpty
@@ -86,7 +91,7 @@ class _UserProfileState extends State<UserProfile> {
                   pinned: true,
                   flexibleSpace: FlexibleSpaceBar(
                     background: Image.network(
-                      resultUser['profileImg'],
+                      resultUser['photoURL'] ?? '',
                       fit: BoxFit.cover,
                     ),
                   ),
@@ -106,14 +111,15 @@ class _UserProfileState extends State<UserProfile> {
                           decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               image: DecorationImage(
-                                fit: BoxFit.fill,
-                                image: NetworkImage(resultUser['profileImg']),
+                                fit: BoxFit.cover,
+                                image:
+                                    NetworkImage(resultUser['photoURL'] ?? ''),
                               ),
                               color: Colors.grey),
                         ),
                         // 팔로워수, 팔로우 버튼
                         Text(
-                            '팔로워 ${store.addCommasToNumber(resultUser['follower'])}'),
+                            '팔로워 ${store.addCommasToNumber(resultUser['follower'] ?? 0)}'),
                         ElevatedButton(
                           onPressed: () => incFollower(),
                           child: const Text('팔로우'),
@@ -132,7 +138,7 @@ class _UserProfileState extends State<UserProfile> {
                   delegate: SliverChildBuilderDelegate(
                     (BuildContext context, int index) {
                       return Image.network(
-                        resultGallery[index],
+                        resultGallery[index] ?? '',
                         fit: BoxFit.cover,
                       );
                     },

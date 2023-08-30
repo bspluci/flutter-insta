@@ -1,7 +1,3 @@
-import 'dart:io';
-import 'dart:convert';
-
-import 'package:http/http.dart' as http;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/widgets.dart'; // Navigator 클래스를 import
@@ -12,12 +8,16 @@ final firestore = FirebaseFirestore.instance;
 final FirebaseAuth _auth = FirebaseAuth.instance;
 
 class UserModel {
-  final String uid;
-  final String displayName;
-  final String email;
+  String? uid;
+  String? displayName;
+  String? email;
+  String? photoURL;
 
   UserModel(
-      {required this.uid, required this.displayName, required this.email});
+      {required this.uid,
+      required this.displayName,
+      required this.email,
+      required this.photoURL});
 }
 
 // 프로바이더 클래스
@@ -28,6 +28,7 @@ class UserProvider extends ChangeNotifier {
 
   void setUser(UserModel user) {
     _user = user;
+
     notifyListeners();
   }
 

@@ -16,6 +16,7 @@ class _LoginState extends State<Login> {
   String email = '';
   String password = '';
   bool isLoading = false;
+  bool _obscureText = true;
 
   Future<dynamic> memberLogin(context) async {
     if (email.isEmpty || password.isEmpty) {
@@ -107,10 +108,21 @@ class _LoginState extends State<Login> {
                       child: FractionallySizedBox(
                         widthFactor: 0.9,
                         child: TextField(
-                          decoration: const InputDecoration(
-                            border: OutlineInputBorder(),
+                          decoration: InputDecoration(
+                            border: const OutlineInputBorder(),
                             labelText: '비밀번호',
+                            suffixIcon: IconButton(
+                              icon: Icon(_obscureText
+                                  ? Icons.visibility_off
+                                  : Icons.visibility),
+                              onPressed: () {
+                                setState(() {
+                                  _obscureText = !_obscureText;
+                                });
+                              },
+                            ),
                           ),
+                          obscureText: _obscureText,
                           onChanged: (text) {
                             setState(
                               () => password = text,

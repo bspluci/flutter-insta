@@ -155,7 +155,7 @@ class _PostUploadState extends State<PostUpload> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Instagram"),
+        title: const Text("POST"),
         automaticallyImplyLeading: false,
         // actions: [
         //   IconButton(

@@ -18,7 +18,7 @@ class _ShopState extends State<Shop> {
   List<QueryDocumentSnapshot<Map<String, dynamic>>>? productList;
 
   void setTitleText() {
-    Provider.of<AppBarTitle>(context, listen: false).setTitle('Shop');
+    Provider.of<TitleProvider>(context, listen: false).setTitle('Shop');
   }
 
   @override
@@ -79,46 +79,68 @@ class _ShopState extends State<Shop> {
           ? const Center(child: CircularProgressIndicator())
           : (productList!.isNotEmpty
               ? ListView.builder(
-                  itemCount: productList!.length,
+                  itemCount: productList!.length + 1,
                   itemBuilder: (context, index) {
-                    return GestureDetector(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => AddShopItem(
-                              fetchData: _fetchData,
-                              itemState: 'EDIT',
-                              itemData: productList![index],
-                            ),
-                          ),
-                        );
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.all(10),
+                    index = index - 1;
+                    if (index == -1) {
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 20),
                         child: Row(
-                          mainAxisAlignment: MainAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Text(
-                              '${productList![index]["name"]} : ',
-                              style: const TextStyle(
-                                  color: Colors.black, fontSize: 19),
+                            ElevatedButton(
+                              onPressed: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) => AddShopItem(
+                                        fetchData: _fetchData,
+                                        itemState: 'ADD')),
+                              ),
+                              child: const Text('ADD'),
                             ),
-                            Text(
-                              store.addCommasToNumber(
-                                  productList![index]['price']),
-                              style: const TextStyle(
-                                  color: Colors.black, fontSize: 19),
-                            ),
-                            IconButton(
-                                onPressed: () {
-                                  _deleteItem(productList![index].id);
-                                },
-                                icon: const Icon(Icons.close)),
                           ],
                         ),
-                      ),
-                    );
+                      );
+                    } else {
+                      return GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => AddShopItem(
+                                fetchData: _fetchData,
+                                itemState: 'EDIT',
+                                itemData: productList![index],
+                              ),
+                            ),
+                          );
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(10),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.start,
+                            children: [
+                              Text(
+                                '${productList![index]["name"]} : ',
+                                style: const TextStyle(
+                                    color: Colors.black, fontSize: 19),
+                              ),
+                              Text(
+                                store.addCommasToNumber(
+                                    productList![index]['price']),
+                                style: const TextStyle(
+                                    color: Colors.black, fontSize: 19),
+                              ),
+                              IconButton(
+                                  onPressed: () {
+                                    _deleteItem(productList![index].id);
+                                  },
+                                  icon: const Icon(Icons.close)),
+                            ],
+                          ),
+                        ),
+                      );
+                    }
                   },
                 )
               : const Center(
@@ -156,14 +178,6 @@ class _AddShopItemState extends State<AddShopItem> {
       _nameController.text = widget.itemData['name'];
       _priceController.text = widget.itemData['price'].toString();
     }
-
-    // 앱 바의 제목 변경
-    void setTitleText() {
-      Provider.of<AppBarTitle>(context, listen: false)
-          .setTitle('${widget.itemState} SHOP ITEM');
-    }
-
-    Future.delayed(Duration.zero, setTitleText);
   }
 
   @override
@@ -234,44 +248,50 @@ class _AddShopItemState extends State<AddShopItem> {
           ),
         ],
       ),
-      body: Form(
-        key: _formKey,
-        child: Column(
-          children: [
-            TextFormField(
-              controller: _nameController,
-              decoration: const InputDecoration(
-                labelText: 'name',
+      body: Container(
+        padding: const EdgeInsets.all(20),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            children: [
+              TextFormField(
+                controller: _nameController,
+                decoration: const InputDecoration(
+                  labelText: 'name',
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter name';
+                  }
+                  return null;
+                },
               ),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter name';
-                }
-                return null;
-              },
-            ),
-            TextFormField(
-              controller: _priceController,
-              decoration: const InputDecoration(
-                labelText: 'price',
+              TextFormField(
+                controller: _priceController,
+                decoration: const InputDecoration(
+                  labelText: 'price',
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter price';
+                  }
+                  return null;
+                },
               ),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter price';
-                }
-                return null;
-              },
-            ),
-            ElevatedButton(
-              onPressed: () {
-                if (_formKey.currentState!.validate()) {
-                  widget.itemState == 'EDIT' ? _editItem() : _addItemData();
-                  Navigator.pop(context);
-                }
-              },
-              child: Text(widget.itemState),
-            ),
-          ],
+              Padding(
+                padding: const EdgeInsets.only(top: 20),
+                child: ElevatedButton(
+                  onPressed: () {
+                    if (_formKey.currentState!.validate()) {
+                      widget.itemState == 'EDIT' ? _editItem() : _addItemData();
+                      Navigator.pop(context);
+                    }
+                  },
+                  child: Text(widget.itemState),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

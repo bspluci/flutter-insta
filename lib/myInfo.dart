@@ -15,7 +15,7 @@ class _MyInfoState extends State<MyInfo> {
   UserModel? user;
 
   void setTitleText() {
-    Provider.of<AppBarTitle>(context, listen: false).setTitle('MyInfo');
+    Provider.of<TitleProvider>(context, listen: false).setTitle('MyInfo');
   }
 
   void getMyInfomationFromProvider() {

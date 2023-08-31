@@ -35,7 +35,7 @@ void main() async {
     providers: [
       ChangeNotifierProvider(create: (context) => DataProvider()),
       ChangeNotifierProvider(create: (context) => UserProvider()),
-      ChangeNotifierProvider(create: (context) => AppBarTitle()),
+      ChangeNotifierProvider(create: (context) => TitleProvider()),
     ],
     child: MaterialApp(
       theme: style.theme,
@@ -126,7 +126,7 @@ class _MyAppState extends State<MyApp> {
     //       '통신 실패: ${response.statusCode} ERROR, ${jsonData['message']}');
     // }
 
-    int perPage = 2;
+    int perPage = 3;
     QuerySnapshot result;
 
     await Future.delayed(const Duration(seconds: 1));
@@ -159,7 +159,7 @@ class _MyAppState extends State<MyApp> {
   }
 
   void setTitleText() {
-    Provider.of<AppBarTitle>(context, listen: false).setTitle('HOME');
+    Provider.of<TitleProvider>(context, listen: false).setTitle('HOME');
   }
 
   void setUserInfoProvider() async {
@@ -186,7 +186,7 @@ class _MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) {
     final logout = Provider.of<UserProvider>(context).logout;
-    final title = Provider.of<AppBarTitle>(context).title;
+    final title = Provider.of<TitleProvider>(context).title;
     bool isLogin = _auth.currentUser != null;
 
     return Scaffold(
@@ -281,7 +281,7 @@ class _PostListState extends State<PostList> {
 
   // 앱 바의 제목 변경
   void setTitleText() {
-    Provider.of<AppBarTitle>(context, listen: false).setTitle('HOME');
+    Provider.of<TitleProvider>(context, listen: false).setTitle('HOME');
   }
 
   @override

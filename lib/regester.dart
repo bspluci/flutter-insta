@@ -29,12 +29,14 @@ class _RegesterState extends State<Regester> {
   String? image;
 
   bool isUploading = false;
+  bool _obscureText = true;
+  bool _obscureTextRe = true;
   File? userImage;
   dynamic pickedFile;
 
   // 앱 바의 제목 변경
   void setTitleText() {
-    Provider.of<AppBarTitle>(context, listen: false).setTitle('REGESTER');
+    Provider.of<TitleProvider>(context, listen: false).setTitle('REGESTER');
   }
 
   Future<void> selectImage() async {
@@ -170,10 +172,25 @@ class _RegesterState extends State<Regester> {
                       child: FractionallySizedBox(
                         widthFactor: 0.9,
                         child: TextField(
-                          decoration: const InputDecoration(
-                            border: OutlineInputBorder(),
+                          // decoration: const InputDecoration(
+                          //   border: OutlineInputBorder(),
+                          //   labelText: '비밀번호',
+                          // ),
+                          decoration: InputDecoration(
+                            border: const OutlineInputBorder(),
                             labelText: '비밀번호',
+                            suffixIcon: IconButton(
+                              icon: Icon(_obscureText
+                                  ? Icons.visibility_off
+                                  : Icons.visibility),
+                              onPressed: () {
+                                setState(() {
+                                  _obscureText = !_obscureText;
+                                });
+                              },
+                            ),
                           ),
+                          obscureText: _obscureText,
                           onChanged: (text) {
                             setState(
                               () => password = text,
@@ -189,10 +206,25 @@ class _RegesterState extends State<Regester> {
                       child: FractionallySizedBox(
                         widthFactor: 0.9,
                         child: TextField(
-                          decoration: const InputDecoration(
-                            border: OutlineInputBorder(),
+                          // decoration: const InputDecoration(
+                          //   border: OutlineInputBorder(),
+                          //   labelText: '비밀번호 확인',
+                          // ),
+                          decoration: InputDecoration(
+                            border: const OutlineInputBorder(),
                             labelText: '비밀번호 확인',
+                            suffixIcon: IconButton(
+                              icon: Icon(_obscureTextRe
+                                  ? Icons.visibility_off
+                                  : Icons.visibility),
+                              onPressed: () {
+                                setState(() {
+                                  _obscureTextRe = !_obscureTextRe;
+                                });
+                              },
+                            ),
                           ),
+                          obscureText: _obscureTextRe,
                           onChanged: (text) {
                             setState(
                               () => passwordRe = text,

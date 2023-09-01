@@ -1,11 +1,8 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
-import 'postUpload.dart';
 import 'shop.dart';
 
 final flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
@@ -60,7 +57,7 @@ showNotification(int id, String title, String content) async {
   );
 
   // 알림 id, 제목, 내용 맘대로 채우기
-  flutterLocalNotificationsPlugin.show(id, title ?? '제목 입력', content ?? '내용 입력',
+  flutterLocalNotificationsPlugin.show(id, title, content,
       const NotificationDetails(android: androidDetails, iOS: iosDetails),
       payload: 'main');
 }

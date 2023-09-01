@@ -1,25 +1,23 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-
 import 'text/vision_detector_views/text_detector_view.dart';
+
+import 'login.dart';
+import 'provider.dart';
+import 'notification.dart';
 import 'style.dart' as style;
 import 'postUpload.dart' as postpublish;
 import 'userProfile.dart' as userprofile;
-import 'provider.dart';
-import 'notification.dart';
 import 'shop.dart' as shop;
 import 'regester.dart' as regester;
-import 'login.dart';
 import 'myInfo.dart' as myinfo;
 
 final firestore = FirebaseFirestore.instance;
@@ -62,6 +60,7 @@ class _MyAppState extends State<MyApp> {
   int page = 0;
   int tabIndex = 0;
   List<dynamic> postData = [];
+  List<dynamic> photoURL = [];
   bool parentLoading = false;
 
   // SharedPreferences에 postList를 저장하는 함수
@@ -147,6 +146,12 @@ class _MyAppState extends State<MyApp> {
             .get();
       }
 
+      for (var i = 0; i < result.docs.length; i++) {
+        final currentPhotoURL =
+            await getMatchUserByUid(result.docs[i]['writerId']);
+        photoURL.add(currentPhotoURL);
+      }
+
       setState(() {
         postData.addAll(result.docs);
       });
@@ -156,6 +161,14 @@ class _MyAppState extends State<MyApp> {
 
     // savePostListFromSharedPreferences();
     setState(() => parentLoading = false);
+  }
+
+  getMatchUserByUid(uid) async {
+    final member = await firestore
+        .collection('members')
+        .where('uid', isEqualTo: uid)
+        .get();
+    return member.docs[0].data()['photoURL'];
   }
 
   void setTitleText() {
@@ -227,6 +240,7 @@ class _MyAppState extends State<MyApp> {
       body: [
         PostList(
             postData: postData,
+            photoURL: photoURL,
             getPostList: getPostList,
             parentLoading: parentLoading),
         const shop.Shop(),
@@ -261,12 +275,14 @@ class _MyAppState extends State<MyApp> {
 
 class PostList extends StatefulWidget {
   final List<dynamic> postData;
+  final List<dynamic> photoURL;
   final dynamic getPostList;
   final bool parentLoading;
 
   const PostList({
     Key? key,
     required this.postData,
+    required this.photoURL,
     required this.getPostList,
     required this.parentLoading,
   }) : super(key: key);
@@ -278,16 +294,14 @@ class PostList extends StatefulWidget {
 class _PostListState extends State<PostList> {
   ScrollController scroll = ScrollController();
   bool isLoading = false;
+  List<dynamic>? userPhotoUrl;
 
   // 앱 바의 제목 변경
   void setTitleText() {
     Provider.of<TitleProvider>(context, listen: false).setTitle('HOME');
   }
 
-  @override
-  void initState() {
-    super.initState();
-    Future.delayed(Duration.zero, setTitleText);
+  getScrollAddPost() {
     scroll.addListener(() {
       if (scroll.position.pixels == scroll.position.maxScrollExtent &&
           !isLoading) {
@@ -301,6 +315,13 @@ class _PostListState extends State<PostList> {
         });
       }
     });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    getScrollAddPost();
+    Future.delayed(Duration.zero, setTitleText);
   }
 
   @override
@@ -349,23 +370,13 @@ class _PostListState extends State<PostList> {
                                   Container(
                                     margin: const EdgeInsets.only(right: 10),
                                     child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(15),
-                                      child: widget.postData[idx]
-                                                      ['writerPhoto'] !=
-                                                  null &&
-                                              widget.postData[idx]
-                                                      ['writerPhoto'] !=
-                                                  ''
-                                          ? Image.network(
-                                              widget.postData[idx]
-                                                  ['writerPhoto'],
-                                              width: 30,
-                                              height: 30,
-                                              fit: BoxFit.cover,
-                                            )
-                                          : const SizedBox(
-                                              width: 30, height: 30),
-                                    ),
+                                        borderRadius: BorderRadius.circular(15),
+                                        child: Image.network(
+                                          widget.photoURL[idx],
+                                          width: 30,
+                                          height: 30,
+                                          fit: BoxFit.cover,
+                                        )),
                                   ),
                                   Text(widget.postData[idx]["writer"],
                                       style: const TextStyle(
@@ -405,7 +416,7 @@ class _PostListState extends State<PostList> {
                           margin: const EdgeInsets.only(top: 15),
                           child: Text('${widget.postData[idx]["content"]}',
                               style: const TextStyle(
-                                  color: Colors.black, fontSize: 16)),
+                                  color: Colors.black, fontSize: 20)),
                         )
                       ],
                     ),

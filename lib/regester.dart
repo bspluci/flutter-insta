@@ -32,7 +32,7 @@ class _RegesterState extends State<Regester> {
   bool _obscureText = true;
   bool _obscureTextRe = true;
   File? userImage;
-  dynamic pickedFile;
+  XFile? pickedFile;
 
   // 앱 바의 제목 변경
   void setTitleText() {
@@ -59,11 +59,14 @@ class _RegesterState extends State<Regester> {
     if (userImage != null) {
       final Reference storageRef = _storage.ref().child(
           'userProfileImages/${DateTime.now()}.${userImage?.path.split('.').last}');
-      final UploadTask uploadTask = storageRef.putFile(File(pickedFile.path));
+      final UploadTask uploadTask = storageRef.putFile(File(pickedFile!.path));
 
       await uploadTask.whenComplete(() async {
         image = await storageRef.getDownloadURL();
       });
+    } else {
+      image =
+          'https://firebasestorage.googleapis.com/v0/b/fluttergram-f438d.appspot.com/o/userProfileImages%2Fdefault.png?alt=media&token=d2252bec-459d-4d80-912b-bd0eeca41690';
     }
 
     // 회원가입
@@ -74,9 +77,7 @@ class _RegesterState extends State<Regester> {
       );
 
       await userCredential.user?.updateDisplayName(userName);
-      if (image != null) {
-        await userCredential.user?.updatePhotoURL(image);
-      }
+      await userCredential.user?.updatePhotoURL(image);
 
       await store.collection('members').add({
         'email': userCredential.user?.email,
@@ -143,7 +144,7 @@ class _RegesterState extends State<Regester> {
                       margin: const EdgeInsets.only(right: 10),
                       child: ElevatedButton(
                         onPressed: () => selectImage(),
-                        child: const Text('회원 이미지 선택'),
+                        child: const Text('이미지 선택'),
                       ),
                     ),
                   ),

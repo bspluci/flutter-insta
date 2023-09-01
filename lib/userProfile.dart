@@ -21,7 +21,6 @@ class _UserProfileState extends State<UserProfile> {
   bool clickFollower = false;
 
   getUserInfo() async {
-    print(widget.userId);
     try {
       final result = await firestore
           .collection('members')

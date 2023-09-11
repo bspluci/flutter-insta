@@ -1,24 +1,26 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:provider/provider.dart';
-import 'package:firebase_core/firebase_core.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
 import 'firebase_options.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'text/vision_detector_views/text_detector_view.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'login.dart';
 import 'provider.dart';
 import 'notification.dart';
+import 'post_upload.dart';
+import 'code_view.dart';
 import 'style.dart' as style;
-import 'postUpload.dart' as postpublish;
-import 'userProfile.dart' as userprofile;
+import 'user_profile.dart' as userprofile;
 import 'shop.dart' as shop;
 import 'regester.dart' as regester;
-import 'myInfo.dart' as myinfo;
+import 'my_info.dart' as myinfo;
 
 final firestore = FirebaseFirestore.instance;
 final _auth = FirebaseAuth.instance;
@@ -28,6 +30,7 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  await dotenv.load(fileName: ".env");
 
   runApp(MultiProvider(
     providers: [
@@ -37,13 +40,12 @@ void main() async {
     ],
     child: MaterialApp(
       theme: style.theme,
-      // home: const MyApp()
       initialRoute: '/',
       routes: {
         '/': (context) => const MyApp(),
-        '/text': (context) => TextRecognizerView(),
+        '/text': (context) => const CodeView(),
         '/login': (context) => const Login(),
-        '/post/publish': (context) => const postpublish.PostUpload(),
+        '/post/publish': (context) => const PostUpload(),
       },
     ),
   ));
@@ -206,6 +208,7 @@ class _MyAppState extends State<MyApp> {
       appBar: AppBar(
         // 타이틀 좌측정렬
         centerTitle: false,
+        automaticallyImplyLeading: false,
         title: Text(title),
         actions: [
           IconButton(

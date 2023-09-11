@@ -196,6 +196,7 @@ class _PostUploadState extends State<PostUpload> {
                   ),
                   Center(
                     child: Container(
+                      height: 50,
                       margin: const EdgeInsets.only(top: 20),
                       child: FractionallySizedBox(
                         widthFactor: 0.9,

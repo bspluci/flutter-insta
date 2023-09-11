@@ -150,6 +150,7 @@ class _RegesterState extends State<Regester> {
                   ),
                   Center(
                     child: Container(
+                      height: 50,
                       margin: const EdgeInsets.only(top: 20),
                       child: FractionallySizedBox(
                         widthFactor: 0.9,
@@ -169,6 +170,7 @@ class _RegesterState extends State<Regester> {
                   ),
                   Center(
                     child: Container(
+                      height: 50,
                       margin: const EdgeInsets.only(top: 20),
                       child: FractionallySizedBox(
                         widthFactor: 0.9,
@@ -203,6 +205,7 @@ class _RegesterState extends State<Regester> {
                   ),
                   Center(
                     child: Container(
+                      height: 50,
                       margin: const EdgeInsets.only(top: 20),
                       child: FractionallySizedBox(
                         widthFactor: 0.9,
@@ -237,6 +240,7 @@ class _RegesterState extends State<Regester> {
                   ),
                   Center(
                     child: Container(
+                      height: 50,
                       margin: const EdgeInsets.only(top: 20),
                       child: FractionallySizedBox(
                         widthFactor: 0.9,

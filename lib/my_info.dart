@@ -213,6 +213,7 @@ class _MyInfoState extends State<MyInfo> {
                       ),
                       Expanded(
                         child: Container(
+                          height: 50,
                           margin: const EdgeInsets.only(top: 20),
                           child: FractionallySizedBox(
                             widthFactor: 0.8,
@@ -247,6 +248,7 @@ class _MyInfoState extends State<MyInfo> {
                       ),
                       Expanded(
                         child: Container(
+                          height: 50,
                           margin: const EdgeInsets.only(top: 20),
                           child: FractionallySizedBox(
                             widthFactor: 0.8,

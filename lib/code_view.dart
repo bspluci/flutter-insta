@@ -14,12 +14,14 @@ class CodeView extends StatefulWidget {
 }
 
 class _CodeViewState extends State<CodeView> {
-  File? _image;
   bool isLoading = false;
-  String? _recognizedText;
+  bool isEditText = false;
+  File? selectedImage;
+  String? recognizedText;
   String? selectedText;
   String? sendText;
-  String? refactoringCode;
+  String? editedText;
+  String? refactoringText;
 
   final _readyText = '텍스트를 인식하려면 이미지를 선택하세요';
   final ImagePicker _picker = ImagePicker();
@@ -33,8 +35,12 @@ class _CodeViewState extends State<CodeView> {
       final imageFile = File(pickedImage.path);
 
       setState(() {
-        _image = imageFile;
-        _recognizedText = null;
+        selectedImage = imageFile;
+        recognizedText = null;
+        selectedText = null;
+        sendText = null;
+        editedText = null;
+        refactoringText = null;
       });
 
       // 이미지에서 텍스트 추출
@@ -43,7 +49,7 @@ class _CodeViewState extends State<CodeView> {
 
       setState(() {
         isLoading = false;
-        _recognizedText = text.text;
+        recognizedText = text.text;
       });
     }
   }
@@ -59,7 +65,7 @@ class _CodeViewState extends State<CodeView> {
 
     setState(() {
       isLoading = true;
-      _recognizedText = null;
+      recognizedText = null;
     });
 
     String content = '$sendText \n 코드 리팩토링';
@@ -83,7 +89,7 @@ class _CodeViewState extends State<CodeView> {
 
     final Map<String, dynamic> responseData = json.decode(response.body);
 
-    refactoringCode = responseData['choices'][0]['message']['content'];
+    refactoringText = responseData['choices'][0]['message']['content'];
 
     setState(() {
       isLoading = false;
@@ -101,111 +107,114 @@ class _CodeViewState extends State<CodeView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar: AppBar(
-          title: const Text('CODE VIEW'),
-          automaticallyImplyLeading: false,
-        ),
-        body: SingleChildScrollView(
-          child: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: <Widget>[
-                Container(
-                  margin: const EdgeInsets.only(top: 50),
-                  child: Column(
-                    children: [
-                      _image == null
-                          ? const Text('')
-                          : Image.file(_image!, height: 350),
-                      const SizedBox(height: 20.0),
-                      ElevatedButton(
-                        onPressed: _pickImage,
-                        child: const Text('갤러리에서 이미지 선택'),
-                      ),
-                    ],
-                  ),
+      appBar: AppBar(
+        title: const Text('CODE VIEW'),
+        automaticallyImplyLeading: false,
+      ),
+      body: SingleChildScrollView(
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              Container(
+                margin: const EdgeInsets.only(top: 50),
+                child: Column(
+                  children: [
+                    selectedImage == null
+                        ? const Text('')
+                        : Image.file(selectedImage!, height: 350),
+                    const SizedBox(height: 20.0),
+                    ElevatedButton(
+                      onPressed: _pickImage,
+                      child: const Text('갤러리에서 이미지 선택'),
+                    ),
+                  ],
                 ),
-                isLoading
-                    ? Container(
-                        margin: const EdgeInsets.only(top: 50),
-                        child: const CircularProgressIndicator(),
-                      )
-                    : Container(
-                        margin: const EdgeInsets.only(top: 30),
-                        child: Text(
-                          _image == null ? _readyText : '',
+              ),
+              isLoading
+                  ? Container(
+                      margin: const EdgeInsets.only(top: 50),
+                      child: const CircularProgressIndicator(),
+                    )
+                  : Container(
+                      margin: const EdgeInsets.only(top: 30),
+                      child: Text(
+                        selectedImage == null ? _readyText : '',
+                        style:
+                            const TextStyle(fontSize: 20, color: Colors.black),
+                      ),
+                    ),
+              Container(
+                padding: const EdgeInsets.symmetric(vertical: 20),
+                child: Container(
+                  alignment: Alignment.topLeft,
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  child: recognizedText == null && refactoringText != null
+                      ? SelectableText(refactoringText ?? '',
                           style: const TextStyle(
-                              fontSize: 20, color: Colors.black),
-                        ),
-                      ),
-                Container(
-                  padding: const EdgeInsets.symmetric(vertical: 20),
-                  child: Container(
-                    alignment: Alignment.topLeft,
-                    padding: const EdgeInsets.symmetric(horizontal: 10),
-                    child: _recognizedText == null && refactoringCode != null
-                        ? SelectableText(refactoringCode ?? '',
-                            style: const TextStyle(
-                                fontSize: 18, color: Colors.black))
-                        : _recognizedText == null && refactoringCode == null
-                            ? const Text('')
-                            : TextSelectionTheme(
-                                data: const TextSelectionThemeData(
-                                  cursorColor: Colors.blue,
-                                  selectionColor: Colors.blue,
-                                  selectionHandleColor: Colors.blue,
-                                ),
-                                child: SelectableText(
-                                  '$_recognizedText',
-                                  style: const TextStyle(
-                                      fontSize: 18, color: Colors.black),
-                                  showCursor: true,
-                                  contextMenuBuilder:
-                                      (context, editableTextState) {
-                                    return AdaptiveTextSelectionToolbar
-                                        .buttonItems(
-                                      anchors:
-                                          editableTextState.contextMenuAnchors,
-                                      buttonItems: <ContextMenuButtonItem>[
-                                        ContextMenuButtonItem(
-                                          onPressed: () {
-                                            editableTextState.selectAll(
-                                                SelectionChangedCause.toolbar);
-                                          },
-                                          type: ContextMenuButtonType.selectAll,
-                                        ),
-                                      ],
-                                    );
-                                  },
-                                  onSelectionChanged: (selection, cause) {
-                                    final text = _recognizedText!.substring(
-                                        selection.start, selection.end);
-                                    text.isEmpty
-                                        ? setState(() => selectedText = null)
-                                        : setState(() => selectedText = text);
-                                  },
-                                ),
+                              fontSize: 18, color: Colors.black))
+                      : recognizedText == null && refactoringText == null
+                          ? const Text('')
+                          : TextSelectionTheme(
+                              data: const TextSelectionThemeData(
+                                cursorColor: Colors.blue,
+                                selectionColor: Colors.blue,
+                                selectionHandleColor: Colors.blue,
                               ),
-                  ),
+                              child: SelectableText(
+                                '$recognizedText',
+                                style: const TextStyle(
+                                    fontSize: 18, color: Colors.black),
+                                showCursor: true,
+                                contextMenuBuilder:
+                                    (context, editableTextState) {
+                                  return AdaptiveTextSelectionToolbar
+                                      .buttonItems(
+                                    anchors:
+                                        editableTextState.contextMenuAnchors,
+                                    buttonItems: <ContextMenuButtonItem>[
+                                      ContextMenuButtonItem(
+                                        onPressed: () {
+                                          editableTextState.selectAll(
+                                              SelectionChangedCause.toolbar);
+                                        },
+                                        type: ContextMenuButtonType.selectAll,
+                                      ),
+                                    ],
+                                  );
+                                },
+                                onSelectionChanged: (selection, cause) {
+                                  final text = recognizedText!.substring(
+                                      selection.start, selection.end);
+                                  text.isEmpty
+                                      ? setState(() => selectedText = null)
+                                      : setState(() => selectedText = text);
+                                },
+                              ),
+                            ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
-        floatingActionButton: SizedBox(
-          child: selectedText != null || sendText != null
-              ? ElevatedButton(
-                  onPressed: () {
-                    showPopup(context); // 팝업 띄우기
-                  },
-                  child: const Text('선택한 텍스트 보기'),
-                )
-              : ElevatedButton(
-                  style: disabledButtonStyle,
-                  onPressed: () {},
-                  child: const Text('선택한 텍스트 보기'),
-                ),
-        ));
+      ),
+      floatingActionButton: refactoringText != null
+          ? const SizedBox()
+          : SizedBox(
+              child: selectedText != null || sendText != null
+                  ? ElevatedButton(
+                      onPressed: () {
+                        showPopup(context); // 팝업 띄우기
+                      },
+                      child: const Text('선택한 텍스트 보기'),
+                    )
+                  : ElevatedButton(
+                      style: disabledButtonStyle,
+                      onPressed: () {},
+                      child: const Text('선택한 텍스트 보기'),
+                    ),
+            ),
+    );
   }
 
   final enabledButtonStyle = ButtonStyle(
@@ -216,6 +225,9 @@ class _CodeViewState extends State<CodeView> {
     backgroundColor: MaterialStateProperty.all(Colors.grey),
     foregroundColor: MaterialStateProperty.all(Colors.white),
   );
+  final double btnWidth = 50;
+  final EdgeInsetsGeometry btnPadding =
+      const EdgeInsets.only(left: 3, right: 3);
 
   void showPopup(BuildContext context) {
     showDialog(
@@ -223,74 +235,175 @@ class _CodeViewState extends State<CodeView> {
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('Selected Text'),
-          content: Container(
+          content: SizedBox(
             child: SingleChildScrollView(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.start,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '저장: ${sendText ?? ''}',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
+              child: isEditText
+                  ? FractionallySizedBox(
+                      child: SizedBox(
+                        height: 300,
+                        child: TextField(
+                          maxLines: 20,
+                          controller: TextEditingController(text: editedText),
+                          decoration: const InputDecoration(
+                            border: OutlineInputBorder(),
+                            labelText: '문구 수정',
+                          ),
+                          onChanged: (text) {
+                            setState(() {
+                              editedText = text;
+                            });
+                          },
+                        ),
+                      ),
+                    )
+                  : Column(
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '저장: ${sendText ?? ''}',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Container(height: 10),
+                        Text('추가: ${selectedText ?? '추가할 문구가 없습니다'}'),
+                      ],
                     ),
-                  ),
-                  Container(height: 10),
-                  Text('추가: ${selectedText ?? '추가할 문구가 없습니다'}'),
-                ],
-              ),
             ),
           ),
           actions: [
-            TextButton(
-              style: enabledButtonStyle,
-              onPressed: () {
-                Navigator.of(context).pop(); // 팝업을 닫습니다.
-                generateText();
-              },
-              child: const Text('변환'),
-            ),
-            TextButton(
-              style: enabledButtonStyle,
-              onPressed: () {
-                const message = '선택한 문구를 추가하시겠습니까?';
-                void setFunction() {
-                  setState(() {
-                    sendText == null
-                        ? sendText = selectedText ?? ''
-                        : sendText = '${sendText ?? ''}\n${selectedText ?? ''}';
-                    selectedText = null;
-                  });
-                }
+            isEditText
+                ? SizedBox(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          width: btnWidth,
+                          padding: btnPadding,
+                          child: TextButton(
+                            style: enabledButtonStyle,
+                            onPressed: () {
+                              setState(() => {
+                                    isEditText = false,
+                                    sendText = editedText,
+                                    selectedText = null,
+                                  });
+                              Navigator.of(context).pop();
+                              showPopup(context);
+                            },
+                            child: const Text('완료'),
+                          ),
+                        ),
+                        Container(
+                          width: btnWidth,
+                          padding: btnPadding,
+                          child: TextButton(
+                            style: enabledButtonStyle,
+                            onPressed: () {
+                              setState(
+                                () => isEditText = false,
+                              );
+                              Navigator.of(context).pop();
+                              showPopup(context);
+                            },
+                            child: const Text('취소'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : SizedBox(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          width: btnWidth,
+                          padding: btnPadding,
+                          child: TextButton(
+                            style: enabledButtonStyle,
+                            onPressed: () {
+                              String message = '선택된 코드를 리팩토링 하시겠습니까?';
+                              Navigator.of(context).pop(); // 팝업을 닫습니다.
+                              showYnPopup(context, message, generateText);
+                            },
+                            child: const Text('변환'),
+                          ),
+                        ),
+                        Container(
+                          width: btnWidth,
+                          padding: btnPadding,
+                          child: TextButton(
+                            style: enabledButtonStyle,
+                            onPressed: () {
+                              const message = '선택한 문구를 추가하시겠습니까?';
+                              void setFunction() {
+                                setState(() {
+                                  sendText == null
+                                      ? sendText = selectedText ?? ''
+                                      : sendText =
+                                          '${sendText ?? ''}\n${selectedText ?? ''}';
+                                  selectedText = null;
+                                });
+                              }
 
-                Navigator.of(context).pop();
-                showYnPopup(context, message, setFunction);
-              },
-              child: const Text('추가'),
-            ),
-            TextButton(
-              style: enabledButtonStyle,
-              onPressed: () {
-                const message = '선택한 문구를 비우시겠습니까?';
-                void setFunction() {
-                  setState(() {
-                    sendText = null;
-                    selectedText = null;
-                  });
-                }
+                              Navigator.of(context).pop();
+                              showYnPopup(context, message, setFunction);
+                            },
+                            child: const Text('추가'),
+                          ),
+                        ),
+                        Container(
+                          width: btnWidth,
+                          padding: btnPadding,
+                          child: TextButton(
+                            style: enabledButtonStyle,
+                            onPressed: () {
+                              setState(() {
+                                isEditText = true;
+                                editedText =
+                                    '${sendText ?? ' '}${selectedText ?? ''}';
+                              }); // 팝업을 닫습니다.
+                              Navigator.of(context).pop();
+                              showPopup(context);
+                            },
+                            child: const Text('수정'),
+                          ),
+                        ),
+                        Container(
+                          width: btnWidth,
+                          padding: btnPadding,
+                          child: TextButton(
+                            style: enabledButtonStyle,
+                            onPressed: () {
+                              const message = '선택한 문구를 비우시겠습니까?';
+                              void setFunction() {
+                                setState(() {
+                                  sendText = null;
+                                  selectedText = null;
+                                });
+                              }
 
-                Navigator.of(context).pop();
-                showYnPopup(context, message, setFunction);
-              },
-              child: const Text('비우기'),
-            ),
-            TextButton(
-              style: enabledButtonStyle,
-              onPressed: () {
-                Navigator.of(context).pop(); // 팝업을 닫습니다.
-              },
-              child: const Text('닫기'),
-            ),
+                              Navigator.of(context).pop();
+                              showYnPopup(context, message, setFunction);
+                            },
+                            child: const Text('비움'),
+                          ),
+                        ),
+                        Container(
+                          width: btnWidth,
+                          padding: btnPadding,
+                          child: TextButton(
+                            style: enabledButtonStyle,
+                            onPressed: () {
+                              Navigator.of(context).pop(); // 팝업을 닫습니다.
+                            },
+                            child: const Text('닫기'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
           ],
         );
       },
@@ -314,9 +427,7 @@ class _CodeViewState extends State<CodeView> {
             TextButton(
               style: enabledButtonStyle,
               onPressed: () {
-                setState(() {
-                  executeFunction!();
-                });
+                executeFunction!();
                 Navigator.of(context).pop(); // 팝업을 닫습니다.
               },
               child: const Text('예'),

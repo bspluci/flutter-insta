@@ -31,7 +31,6 @@ class _UserProfileState extends State<UserProfile> {
 
       setState(() {
         resultUser = getUser;
-        print(resultUser);
       });
 
       await getUserGallery();

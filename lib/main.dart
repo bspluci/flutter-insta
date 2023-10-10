@@ -200,9 +200,13 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
+    final mediaQuery = MediaQuery.of(context).size.width > 640;
     final logout = Provider.of<UserProvider>(context).logout;
     final title = Provider.of<TitleProvider>(context).title;
     bool isLogin = _auth.currentUser != null;
+
+    // 기기 반응형 넓이
+    print(mediaQuery);
 
     return Scaffold(
       appBar: AppBar(

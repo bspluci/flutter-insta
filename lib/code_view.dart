@@ -62,6 +62,7 @@ class _CodeViewState extends State<CodeView> {
         return;
       }
     }
+    sendText = selectedText != null ? '$sendText\n$selectedText' : sendText;
 
     setState(() {
       isLoading = true;

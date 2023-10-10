@@ -143,8 +143,31 @@ class _ShopState extends State<Shop> {
                     }
                   },
                 )
-              : const Center(
-                  child: Text('No data'),
+              : Padding(
+                  padding: const EdgeInsets.only(top: 100),
+                  child: Column(
+                    children: [
+                      const Text('No data'),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 20),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            ElevatedButton(
+                              onPressed: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) => AddShopItem(
+                                        fetchData: _fetchData,
+                                        itemState: 'ADD')),
+                              ),
+                              child: const Text('ADD'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 )),
     );
   }

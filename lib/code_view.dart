@@ -78,7 +78,7 @@ class _CodeViewState extends State<CodeView> {
         'Authorization': 'Bearer ${dotenv.env['CHAT_API_KEY']}'
       },
       body: jsonEncode({
-        'model': dotenv.env['CHAT_MODEL'],
+        'model': 'gpt-3.5-turbo',
         'messages': [
           {
             'role': 'user',

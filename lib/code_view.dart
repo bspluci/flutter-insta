@@ -75,7 +75,7 @@ class _CodeViewState extends State<CodeView> {
       Uri.parse('https://api.openai.com/v1/chat/completions'),
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer ${dotenv.env['CHAT_API_KEY']}'
+        'Authorization': 'Bearer ${dotenv.env['GPT_API_KEY']}'
       },
       body: jsonEncode({
         'model': 'gpt-3.5-turbo',

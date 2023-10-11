@@ -40,6 +40,42 @@
           ]
         }
       }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:294481322328:android:be28620e0589ee3a0a052d",
+        "android_client_info": {
+          "package_name": "com.parkjh.instagram"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "294481322328-40c8t8afl5nfarb0q01ggnpnhn85hvl7.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCBEGA_vzG5ObhwmzGmJk_hfE6NQacPqdE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "294481322328-40c8t8afl5nfarb0q01ggnpnhn85hvl7.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "294481322328-b8bnppaumtp0atgpvbji834ol9v6t6l7.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.parkjh.instagram"
+              }
+            }
+          ]
+        }
+      }
     }
   ],
   "configuration_version": "1"

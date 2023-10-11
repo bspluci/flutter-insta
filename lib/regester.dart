@@ -6,6 +6,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import 'provider.dart';
 import 'notification.dart';
@@ -66,7 +67,7 @@ class _RegesterState extends State<Regester> {
       });
     } else {
       image =
-          'https://firebasestorage.googleapis.com/v0/b/fluttergram-f438d.appspot.com/o/userProfileImages%2Fdefault.png?alt=media&token=d2252bec-459d-4d80-912b-bd0eeca41690';
+          'https://firebasestorage.googleapis.com/v0/b/fluttergram-f438d.appspot.com/o/userProfileImages%2Fdefault.png?alt=media&token=d2252bec-459d-4d80-912b-bd0eeca41690&_gl=1*u031bs*_ga*MjEzMzgyMzY5LjE2ODk1NTg3Njk.*_ga_CW55HF8NVT*MTY5NjkxMTU4OC4xMjAuMS4xNjk2OTI1MDkxLjMyLjAuMA';
     }
 
     // 회원가입
@@ -78,7 +79,6 @@ class _RegesterState extends State<Regester> {
 
       await userCredential.user?.updateDisplayName(userName);
       await userCredential.user?.updatePhotoURL(image);
-
       await store.collection('members').add({
         'email': userCredential.user?.email,
         'displayName': userName,
@@ -87,7 +87,8 @@ class _RegesterState extends State<Regester> {
         'follower': 0,
       });
 
-      await showNotification(0, '회원가입 완료', '회원가입이 완료됐습니다.');
+      // await showNotification(0, '회원가입 완료', '회원가입이 완료됐습니다.');
+      setState(() => isUploading = false);
 
       Navigator.pop(context, true);
       Navigator.of(context).pushNamed('/');
@@ -95,11 +96,12 @@ class _RegesterState extends State<Regester> {
       setState(() => isUploading = false);
 
       if (e.code == 'weak-password') {
-        return showInvalidInputNotification(context, '비밀번호가 너무 약합니다.');
+        return showInvalidInputNotification(context, '조금 더 강력한 비밀번호를 입력해주세요.');
       } else if (e.code == 'email-already-in-use') {
         return showInvalidInputNotification(context, '이미 사용중인 이메일입니다.');
       }
     } catch (e) {
+      setState(() => isUploading = false);
       print(e);
     }
 

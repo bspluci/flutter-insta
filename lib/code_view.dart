@@ -2,9 +2,9 @@ import 'dart:io';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:google_ml_kit/google_ml_kit.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 
 class CodeView extends StatefulWidget {
   const CodeView({Key? key}) : super(key: key);
@@ -25,7 +25,7 @@ class _CodeViewState extends State<CodeView> {
 
   final _readyText = '텍스트를 인식하려면 이미지를 선택하세요';
   final ImagePicker _picker = ImagePicker();
-  final TextRecognizer textDetector = GoogleMlKit.vision.textRecognizer();
+  final TextRecognizer textDetector = TextRecognizer();
 
   Future<void> _pickImage() async {
     final pickedImage = await _picker.pickImage(source: ImageSource.gallery);

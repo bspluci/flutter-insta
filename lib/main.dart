@@ -134,13 +134,13 @@ class _MyAppState extends State<MyApp> {
 
     try {
       if (postData.isEmpty) {
-        result = await FirebaseFirestore.instance
+        result = await firestore
             .collection('mainPosts')
             .orderBy('timestamp', descending: true)
             .limit(perPage)
             .get();
       } else {
-        result = await FirebaseFirestore.instance
+        result = await firestore
             .collection('mainPosts')
             .orderBy('timestamp', descending: true)
             .startAfterDocument(postData.last)
@@ -206,7 +206,7 @@ class _MyAppState extends State<MyApp> {
     bool isLogin = _auth.currentUser != null;
 
     // 기기 반응형 넓이
-    print(mediaQuery);
+    // print(mediaQuery);
 
     return Scaffold(
       appBar: AppBar(

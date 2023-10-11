@@ -71,6 +71,7 @@ flutter {
 
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
+    implementation 'com.google.firebase:firebase-ml-vision:24.0.3'
     implementation 'com.google.mlkit:text-recognition-chinese:16.0.0-beta6'
     implementation 'com.google.mlkit:text-recognition-devanagari:16.0.0-beta6'
     implementation 'com.google.mlkit:text-recognition-japanese:16.0.0-beta6'

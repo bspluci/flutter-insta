@@ -32,6 +32,9 @@
             <meta-data
                 android:name="flutter_local_notifications_channel_default_id"
                 android:value="instagramPost" />
+            <meta-data
+                android:name="com.google.firebase.ml.vision.DEPENDENCIES"
+                android:value="ocr" />
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>

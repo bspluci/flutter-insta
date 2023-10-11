@@ -54,7 +54,7 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyCBEGA_vzG5ObhwmzGmJk_hfE6NQacPqdE',
-    appId: '1:294481322328:android:046057e3172406520a052d',
+    appId: '1:294481322328:android:be28620e0589ee3a0a052d',
     messagingSenderId: '294481322328',
     projectId: 'fluttergram-f438d',
     storageBucket: 'fluttergram-f438d.appspot.com',
@@ -62,21 +62,19 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyC7AsZFHvJJ6THmyEOO458N3J32g9d8A_U',
-    appId: '1:294481322328:ios:0581444a4e0a69fc0a052d',
+    appId: '1:294481322328:ios:2e11efbf36b47e9e0a052d',
     messagingSenderId: '294481322328',
     projectId: 'fluttergram-f438d',
     storageBucket: 'fluttergram-f438d.appspot.com',
-    iosClientId: '294481322328-b8bnppaumtp0atgpvbji834ol9v6t6l7.apps.googleusercontent.com',
     iosBundleId: 'com.parkjh.instagram',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
     apiKey: 'AIzaSyC7AsZFHvJJ6THmyEOO458N3J32g9d8A_U',
-    appId: '1:294481322328:ios:0581444a4e0a69fc0a052d',
+    appId: '1:294481322328:ios:2e11efbf36b47e9e0a052d',
     messagingSenderId: '294481322328',
     projectId: 'fluttergram-f438d',
     storageBucket: 'fluttergram-f438d.appspot.com',
-    iosClientId: '294481322328-b8bnppaumtp0atgpvbji834ol9v6t6l7.apps.googleusercontent.com',
     iosBundleId: 'com.parkjh.instagram',
   );
 }

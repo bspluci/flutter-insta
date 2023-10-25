@@ -6,14 +6,14 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 
-class CodeView extends StatefulWidget {
-  const CodeView({Key? key}) : super(key: key);
+class TextDetector extends StatefulWidget {
+  const TextDetector({Key? key}) : super(key: key);
 
   @override
-  State<CodeView> createState() => _CodeViewState();
+  State<TextDetector> createState() => _TextDetectorState();
 }
 
-class _CodeViewState extends State<CodeView> {
+class _TextDetectorState extends State<TextDetector> {
   bool isLoading = false;
   bool isEditText = false;
   File? selectedImage;
@@ -22,10 +22,15 @@ class _CodeViewState extends State<CodeView> {
   String? sendText;
   String? editedText;
   String? refactoringText;
+  String doSeomthing = '코드 리팩토링';
 
+  final _doController = TextEditingController();
+  final _doFocus = FocusNode();
   final _readyText = '텍스트를 인식하려면 이미지를 선택하세요';
   final ImagePicker _picker = ImagePicker();
-  final TextRecognizer textDetector = TextRecognizer();
+  var _script = TextRecognitionScript.latin;
+  var _textRecognizer = TextRecognizer(script: TextRecognitionScript.latin);
+  // final _textRecognizer = TextRecognizer(script: TextRecognitionScript.latin);
 
   Future<void> _pickImage() async {
     final pickedImage = await _picker.pickImage(source: ImageSource.gallery);
@@ -45,11 +50,10 @@ class _CodeViewState extends State<CodeView> {
 
       // 이미지에서 텍스트 추출
       final inputImage = InputImage.fromFile(imageFile);
-      final text = await textDetector.processImage(inputImage);
-
+      final extractedText = await _textRecognizer.processImage(inputImage);
       setState(() {
         isLoading = false;
-        recognizedText = text.text;
+        recognizedText = extractedText.text;
       });
     }
   }
@@ -69,7 +73,7 @@ class _CodeViewState extends State<CodeView> {
       recognizedText = null;
     });
 
-    String content = '$sendText \n 코드 리팩토링';
+    String content = '$sendText \n $doSeomthing';
 
     final response = await http.post(
       Uri.parse('https://api.openai.com/v1/chat/completions'),
@@ -100,8 +104,16 @@ class _CodeViewState extends State<CodeView> {
   }
 
   @override
-  void dispose() {
-    textDetector.close();
+  void initState() {
+    super.initState();
+    _doController.text = doSeomthing;
+  }
+
+  @override
+  void dispose() async {
+    _textRecognizer.close();
+    _doController.dispose();
+    _doFocus.dispose();
     super.dispose();
   }
 
@@ -109,94 +121,136 @@ class _CodeViewState extends State<CodeView> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('CODE VIEW'),
+        title: const Text('Text Detector'),
         automaticallyImplyLeading: false,
       ),
       body: SingleChildScrollView(
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: <Widget>[
-              Container(
-                margin: const EdgeInsets.only(top: 50),
-                child: Column(
-                  children: [
-                    selectedImage == null
-                        ? const Text('')
-                        : Image.file(selectedImage!, height: 350),
-                    const SizedBox(height: 20.0),
-                    ElevatedButton(
-                      onPressed: _pickImage,
-                      child: const Text('갤러리에서 이미지 선택'),
-                    ),
-                  ],
-                ),
-              ),
-              isLoading
-                  ? Container(
-                      margin: const EdgeInsets.only(top: 50),
-                      child: const CircularProgressIndicator(),
-                    )
-                  : Container(
-                      margin: const EdgeInsets.only(top: 30),
-                      child: Text(
-                        selectedImage == null ? _readyText : '',
-                        style:
-                            const TextStyle(fontSize: 20, color: Colors.black),
+        child: Stack(
+          children: [
+            Positioned(
+              top: 10,
+              left: 100,
+              right: 100,
+              child: Row(
+                children: [
+                  const Spacer(),
+                  Container(
+                      decoration: BoxDecoration(
+                        color: Colors.black54,
+                        borderRadius: BorderRadius.circular(10.0),
                       ),
-                    ),
-              Container(
-                padding: const EdgeInsets.symmetric(vertical: 20),
-                child: Container(
-                  alignment: Alignment.topLeft,
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                  child: recognizedText == null && refactoringText != null
-                      ? SelectableText(refactoringText ?? '',
-                          style: const TextStyle(
-                              fontSize: 18, color: Colors.black))
-                      : recognizedText == null && refactoringText == null
-                          ? const Text('')
-                          : TextSelectionTheme(
-                              data: const TextSelectionThemeData(
-                                cursorColor: Colors.blue,
-                                selectionColor: Colors.blue,
-                                selectionHandleColor: Colors.blue,
-                              ),
-                              child: SelectableText(
-                                '$recognizedText',
-                                style: const TextStyle(
-                                    fontSize: 18, color: Colors.black),
-                                showCursor: true,
-                                contextMenuBuilder:
-                                    (context, editableTextState) {
-                                  return AdaptiveTextSelectionToolbar
-                                      .buttonItems(
-                                    anchors:
-                                        editableTextState.contextMenuAnchors,
-                                    buttonItems: <ContextMenuButtonItem>[
-                                      ContextMenuButtonItem(
-                                        onPressed: () {
-                                          editableTextState.selectAll(
-                                              SelectionChangedCause.toolbar);
-                                        },
-                                        type: ContextMenuButtonType.selectAll,
-                                      ),
-                                    ],
-                                  );
-                                },
-                                onSelectionChanged: (selection, cause) {
-                                  final text = recognizedText!.substring(
-                                      selection.start, selection.end);
-                                  text.isEmpty
-                                      ? setState(() => selectedText = null)
-                                      : setState(() => selectedText = text);
-                                },
-                              ),
-                            ),
-                ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(4.0),
+                        child: _buildDropdown(),
+                      )),
+                  const Spacer(),
+                ],
               ),
-            ],
-          ),
+            ),
+            Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: <Widget>[
+                Container(
+                  margin: const EdgeInsets.only(top: 50),
+                  child: Column(
+                    children: [
+                      selectedImage == null
+                          ? const Text('')
+                          : Image.file(selectedImage!, height: 350),
+                      const SizedBox(height: 20.0),
+                      ElevatedButton(
+                        onPressed: _pickImage,
+                        child: const Text('갤러리에서 이미지 선택'),
+                      ),
+                      Container(
+                        height: 50,
+                        margin: const EdgeInsets.only(top: 20),
+                        child: FractionallySizedBox(
+                          widthFactor: 0.8,
+                          child: TextField(
+                            decoration: const InputDecoration(
+                              border: OutlineInputBorder(),
+                            ),
+                            onTap: () {
+                              _doFocus.requestFocus();
+                            },
+                            focusNode: _doFocus,
+                            controller: _doController,
+                            onChanged: (text) {
+                              setState(() => doSeomthing = text);
+                            },
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                isLoading
+                    ? Container(
+                        margin: const EdgeInsets.only(top: 50),
+                        child: const CircularProgressIndicator(),
+                      )
+                    : Container(
+                        margin: const EdgeInsets.only(top: 30),
+                        child: Text(
+                          selectedImage == null ? _readyText : '',
+                          style: const TextStyle(
+                              fontSize: 20, color: Colors.black),
+                        ),
+                      ),
+                Container(
+                  padding: const EdgeInsets.symmetric(vertical: 20),
+                  child: Container(
+                    alignment: Alignment.topLeft,
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    child: recognizedText == null && refactoringText != null
+                        ? SelectableText(refactoringText ?? '',
+                            style: const TextStyle(
+                                fontSize: 18, color: Colors.black))
+                        : recognizedText == null && refactoringText == null
+                            ? const Text('')
+                            : TextSelectionTheme(
+                                data: const TextSelectionThemeData(
+                                  cursorColor: Colors.blue,
+                                  selectionColor: Colors.blue,
+                                  selectionHandleColor: Colors.blue,
+                                ),
+                                child: SelectableText(
+                                  '$recognizedText',
+                                  style: const TextStyle(
+                                      fontSize: 18, color: Colors.black),
+                                  showCursor: true,
+                                  contextMenuBuilder:
+                                      (context, editableTextState) {
+                                    return AdaptiveTextSelectionToolbar
+                                        .buttonItems(
+                                      anchors:
+                                          editableTextState.contextMenuAnchors,
+                                      buttonItems: <ContextMenuButtonItem>[
+                                        ContextMenuButtonItem(
+                                          onPressed: () {
+                                            editableTextState.selectAll(
+                                                SelectionChangedCause.toolbar);
+                                          },
+                                          type: ContextMenuButtonType.selectAll,
+                                        ),
+                                      ],
+                                    );
+                                  },
+                                  onSelectionChanged: (selection, cause) {
+                                    final text = recognizedText!.substring(
+                                        selection.start, selection.end);
+                                    text.isEmpty
+                                        ? setState(() => selectedText = null)
+                                        : setState(() => selectedText = text);
+                                  },
+                                ),
+                              ),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
       floatingActionButton: refactoringText != null
@@ -324,11 +378,11 @@ class _CodeViewState extends State<CodeView> {
                           child: TextButton(
                             style: enabledButtonStyle,
                             onPressed: () {
-                              String message = '선택된 코드를 리팩토링 하시겠습니까?';
+                              String message = '$doSeomthing 하시겠습니까?';
                               Navigator.of(context).pop(); // 팝업을 닫습니다.
                               showYnPopup(context, message, generateText);
                             },
-                            child: const Text('변환'),
+                            child: const Text('GPT'),
                           ),
                         ),
                         Container(
@@ -410,6 +464,36 @@ class _CodeViewState extends State<CodeView> {
       },
     );
   }
+
+  Widget _buildDropdown() => DropdownButton<TextRecognitionScript>(
+        value: _script,
+        dropdownColor: Colors.black54,
+        iconEnabledColor: Colors.white,
+        padding: EdgeInsets.only(left: 10, right: 10),
+        icon: const Icon(Icons.arrow_downward),
+        elevation: 16,
+        style: const TextStyle(color: Colors.white),
+        underline: Container(
+          height: 2,
+          color: Colors.white,
+        ),
+        onChanged: (TextRecognitionScript? script) {
+          if (script != null) {
+            setState(() {
+              _script = script;
+              _textRecognizer.close();
+              _textRecognizer = TextRecognizer(script: _script);
+            });
+          }
+        },
+        items: TextRecognitionScript.values
+            .map<DropdownMenuItem<TextRecognitionScript>>((script) {
+          return DropdownMenuItem<TextRecognitionScript>(
+            value: script,
+            child: Text(script.name.toUpperCase()),
+          );
+        }).toList(),
+      );
 
   void showYnPopup(
       BuildContext context, String? message, Function? executeFunction) {

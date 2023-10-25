@@ -40,6 +40,17 @@ initNotification(context) async {
       onDidReceiveNotificationResponse: onDidReceiveNotificationResponse);
 }
 
+requestPermission() {
+  flutterLocalNotificationsPlugin
+      .resolvePlatformSpecificImplementation<
+          IOSFlutterLocalNotificationsPlugin>()
+      ?.requestPermissions(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+}
+
 showNotification(int id, String title, String content) async {
   const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
     'instagramPost',

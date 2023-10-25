@@ -14,7 +14,8 @@ final FirebaseStorage _storage = FirebaseStorage.instance;
 final FirebaseAuth _auth = FirebaseAuth.instance;
 
 class PostUpload extends StatefulWidget {
-  const PostUpload({Key? key}) : super(key: key);
+  final dynamic propsData;
+  const PostUpload({Key? key, this.propsData}) : super(key: key);
 
   @override
   State<PostUpload> createState() => _PostUploadState();
@@ -23,52 +24,85 @@ class PostUpload extends StatefulWidget {
 class _PostUploadState extends State<PostUpload> {
   String writerId = '';
   String writer = '';
-  String title = '';
-  String content = '';
   String contentImage = '';
   int like = 0;
-
   bool isUploading = false;
   File? userImage;
   dynamic pickedFile;
+  bool changeImageState = false;
+
+  final _titleController = TextEditingController();
+  final _contentController = TextEditingController();
+
+  setInitData() {
+    if (widget.propsData != null) {
+      writerId = widget.propsData['writerId'];
+      writer = widget.propsData['writer'];
+      _titleController.text = widget.propsData['title'];
+      _contentController.text = widget.propsData['content'];
+      contentImage = widget.propsData['contentImage'];
+      like = widget.propsData['like'];
+    }
+  }
 
   Future<void> selectImage() async {
     final ImagePicker picker = ImagePicker();
     pickedFile = await picker.pickImage(source: ImageSource.gallery);
-    setState(() => userImage = File(pickedFile?.path ?? ''));
+    setState(() {
+      userImage = File(pickedFile?.path ?? '');
+      changeImageState = true;
+    });
   }
 
-  Future<void> uploadPost(context) async {
+  Future<void> uploadPost(context, postDivi) async {
     UserModel? user = Provider.of<UserProvider>(context, listen: false).user;
 
-    if (content.isEmpty || title.isEmpty) {
-      // Show a notification for invalid price input
+    if (_contentController.text.isEmpty || _titleController.text.isEmpty) {
       return await showInvalidInputNotification(context, "제목과 내용을 입력해주세요.");
     }
 
     // 게시물 업로드 중임을 표시
     setState(() => isUploading = true);
 
-    final Reference storageRef = _storage.ref().child(
-        'postImages/${DateTime.now()}.${userImage?.path.split('.').last}');
-    final UploadTask uploadTask = storageRef.putFile(File(pickedFile.path));
+    if (changeImageState) {
+      // 이미지 삭제
+      final Reference imageRef =
+          FirebaseStorage.instance.refFromURL(widget.propsData['contentImage']);
+      await imageRef.delete();
 
-    await uploadTask.whenComplete(() async {
-      contentImage = await storageRef.getDownloadURL();
-    });
+      // 새운 이미지 업로드
+      final Reference storageRef = _storage.ref().child(
+          'postImages/${DateTime.now()}.${userImage?.path.split('.').last}');
+      final UploadTask uploadTask = storageRef.putFile(File(pickedFile.path));
+
+      await uploadTask.whenComplete(() async {
+        contentImage = await storageRef.getDownloadURL();
+      });
+    }
 
     // 파이어스토어에 게시물 업로드
     try {
-      await FirebaseFirestore.instance.collection('mainPosts').add({
-        'contentImage': contentImage,
-        'like': like,
-        'writerId': user?.uid,
-        'writer': user?.displayName,
-        'writerPhoto': user?.photoURL,
-        'title': title,
-        'content': content,
-        'timestamp': DateTime.now(),
-      });
+      if (postDivi == 'Upload') {
+        await FirebaseFirestore.instance.collection('mainPosts').add({
+          'contentImage': contentImage,
+          'like': like,
+          'writerId': user?.uid,
+          'writer': user?.displayName,
+          'writerPhoto': user?.photoURL,
+          'title': _titleController.text,
+          'content': _contentController.text,
+          'timestamp': DateTime.now(),
+        });
+      } else if (postDivi == 'Update') {
+        await FirebaseFirestore.instance
+            .collection('mainPosts')
+            .doc(widget.propsData?.id)
+            .update({
+          'contentImage': contentImage,
+          'title': _titleController.text,
+          'content': _contentController.text,
+        });
+      }
 
       await showNotification(0, '게시물 업로드 완료', '게시물이 성공적으로 업로드되었습니다.');
     } catch (e) {
@@ -76,9 +110,10 @@ class _PostUploadState extends State<PostUpload> {
       print(e);
     }
 
+    // 로딩바 최소시간 설정
+    changeImageState = false;
     await Future.delayed(const Duration(milliseconds: 500));
 
-    Navigator.pop(context, true);
     Navigator.of(context).pushNamed('/');
   }
 
@@ -148,25 +183,24 @@ class _PostUploadState extends State<PostUpload> {
   @override
   void initState() {
     super.initState();
+    setInitData();
     chackLogin();
   }
 
   @override
+  void dispose() {
+    _titleController.dispose();
+    _contentController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final postDivi = widget.propsData != null ? 'Update' : 'Upload';
     return Scaffold(
       appBar: AppBar(
         title: const Text("POST"),
         automaticallyImplyLeading: false,
-        // actions: [
-        //   IconButton(
-        //     icon: const Icon(Icons.done),
-        //     onPressed: () {
-        //       Navigator.push(context,
-        //           MaterialPageRoute(builder: (context) => uploadPost())
-        //       );
-        //     },
-        //   ),
-        // ],
       ),
       body: isUploading
           ? const Center(child: CircularProgressIndicator())
@@ -182,7 +216,11 @@ class _PostUploadState extends State<PostUpload> {
                               fit: BoxFit.cover,
                               height: 250,
                             )
-                          : const Text('No Image', style: TextStyle(height: 5)),
+                          : contentImage.isNotEmpty
+                              ? Image.network(contentImage,
+                                  fit: BoxFit.cover, height: 250)
+                              : const Text('No Image',
+                                  style: TextStyle(height: 5)),
                     ),
                   ),
                   Center(
@@ -205,11 +243,7 @@ class _PostUploadState extends State<PostUpload> {
                             border: OutlineInputBorder(),
                             labelText: 'Title',
                           ),
-                          onChanged: (text) {
-                            setState(
-                              () => title = text,
-                            );
-                          },
+                          controller: _titleController,
                         ),
                       ),
                     ),
@@ -226,11 +260,8 @@ class _PostUploadState extends State<PostUpload> {
                             border: OutlineInputBorder(),
                             labelText: 'Content',
                           ),
-                          onChanged: (text) {
-                            setState(
-                              () => content = text,
-                            );
-                          },
+                          // content의 데이터가 있다면 기존 데이터를 보여줌
+                          controller: _contentController,
                         ),
                       ),
                     ),
@@ -242,8 +273,8 @@ class _PostUploadState extends State<PostUpload> {
                         Container(
                           margin: const EdgeInsets.only(right: 5),
                           child: ElevatedButton(
-                            onPressed: () => uploadPost(context),
-                            child: const Text('Publish'),
+                            onPressed: () => uploadPost(context, postDivi),
+                            child: Text(postDivi),
                           ),
                         ),
                         //

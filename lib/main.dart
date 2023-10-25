@@ -10,19 +10,20 @@ import 'firebase_options.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 
 import 'login.dart';
 import 'provider.dart';
 import 'notification.dart';
 import 'post_upload.dart';
-import 'code_view.dart';
+import 'text_detector.dart';
 import 'style.dart' as style;
 import 'user_profile.dart' as userprofile;
 import 'shop.dart' as shop;
 import 'regester.dart' as regester;
 import 'my_info.dart' as myinfo;
 
-final firestore = FirebaseFirestore.instance;
+final _store = FirebaseFirestore.instance;
 final _auth = FirebaseAuth.instance;
 
 void main() async {
@@ -43,9 +44,9 @@ void main() async {
       initialRoute: '/',
       routes: {
         '/': (context) => const MyApp(),
-        '/text': (context) => const CodeView(),
+        '/text': (context) => const TextDetector(),
         '/login': (context) => const Login(),
-        '/post/publish': (context) => const PostUpload(),
+        '/post/publish': (context) => const PostUpload(propsData: null),
       },
     ),
   ));
@@ -65,6 +66,9 @@ class _MyAppState extends State<MyApp> {
   List<dynamic> photoURL = [];
   bool parentLoading = false;
 
+  final GlobalKey<RefreshIndicatorState> _refreshIndicatorKey =
+      GlobalKey<RefreshIndicatorState>();
+
   // SharedPreferences에 postList를 저장하는 함수
   savePostListFromSharedPreferences() async {
     final prefs = await SharedPreferences.getInstance();
@@ -76,7 +80,6 @@ class _MyAppState extends State<MyApp> {
   // sharedPreferences에서 postList를 불러오는 함수
   getPostListFromSharedPreferences() async {
     getPostList();
-    return;
 
     // SharedPreferences - 캐시에 데이터를 저장해 빠르게 불러올 수 있음
     // final prefs = await SharedPreferences.getInstance();
@@ -96,54 +99,55 @@ class _MyAppState extends State<MyApp> {
     // }
   }
 
-  getPostList() async {
+  // Future<void> getPostList({String? divi}) async {
+  // int itemLimit = 5;
+  // page = page + 1;
+  // final origin = Platform.isAndroid
+  //     ? 'http://172.20.59.28:8080'
+  //     : 'http://localhost:8080';
+  // final url = '$origin/api/post/getAllPostList?limit=$itemLimit&page=$page';
+  // final response = await http.get(
+  //   Uri.parse(url),
+  // );
+
+  // if (response.statusCode == 200) {
+  //   final jsonData = json.decode(response.body);
+  //   await Future.delayed(const Duration(seconds: 1));
+
+  //   setState(() {
+  //     postData = [...postData, ...jsonData['data']];
+  //   });
+  // } else {
+  //   final jsonData = response.statusCode != 404
+  //       ? json.decode(response.body)
+  //       : {'message': 'not found'};
+
+  //   await showInvalidInputNotification(context,
+  //       '통신 실패: ${response.statusCode} ERROR, ${jsonData['message']}');
+  // }
+
+  Future<void> getPostList({String? divi}) async {
     setState(() {
       parentLoading = true;
     });
 
-    // int itemLimit = 5;
-    // page = page + 1;
-    // final origin = Platform.isAndroid
-    //     ? 'http://172.20.59.28:8080'
-    //     : 'http://localhost:8080';
-    // final url = '$origin/api/post/getAllPostList?limit=$itemLimit&page=$page';
-    // final response = await http.get(
-    //   Uri.parse(url),
-    // );
-
-    // if (response.statusCode == 200) {
-    //   final jsonData = json.decode(response.body);
-    //   await Future.delayed(const Duration(seconds: 1));
-
-    //   setState(() {
-    //     postData = [...postData, ...jsonData['data']];
-    //   });
-    // } else {
-    //   final jsonData = response.statusCode != 404
-    //       ? json.decode(response.body)
-    //       : {'message': 'not found'};
-
-    //   await showInvalidInputNotification(context,
-    //       '통신 실패: ${response.statusCode} ERROR, ${jsonData['message']}');
-    // }
-
     int perPage = 3;
     QuerySnapshot result;
-
     await Future.delayed(const Duration(seconds: 1));
 
     try {
-      if (postData.isEmpty) {
-        result = await firestore
-            .collection('mainPosts')
-            .orderBy('timestamp', descending: true)
-            .limit(perPage)
-            .get();
-      } else {
-        result = await firestore
+      if (divi == 'add') {
+        result = await _store
             .collection('mainPosts')
             .orderBy('timestamp', descending: true)
             .startAfterDocument(postData.last)
+            .limit(perPage)
+            .get();
+      } else {
+        postData = [];
+        result = await _store
+            .collection('mainPosts')
+            .orderBy('timestamp', descending: true)
             .limit(perPage)
             .get();
       }
@@ -165,11 +169,13 @@ class _MyAppState extends State<MyApp> {
     setState(() => parentLoading = false);
   }
 
+  addPostList() async {
+    await getPostList(divi: 'add');
+  }
+
   getMatchUserByUid(uid) async {
-    final member = await firestore
-        .collection('members')
-        .where('uid', isEqualTo: uid)
-        .get();
+    final member =
+        await _store.collection('members').where('uid', isEqualTo: uid).get();
     return member.docs[0].data()['photoURL'];
   }
 
@@ -178,7 +184,7 @@ class _MyAppState extends State<MyApp> {
   }
 
   void setUserInfoProvider() async {
-    final user = FirebaseAuth.instance.currentUser;
+    final user = _auth.currentUser;
     final userInfo = UserModel(
       displayName: user?.displayName,
       email: user?.email,
@@ -193,6 +199,7 @@ class _MyAppState extends State<MyApp> {
   void initState() {
     super.initState();
     initNotification(context);
+    requestPermission();
     getPostListFromSharedPreferences();
     Future.delayed(Duration.zero, setTitleText);
     Future.delayed(Duration.zero, setUserInfoProvider);
@@ -244,15 +251,19 @@ class _MyAppState extends State<MyApp> {
         ],
       ),
       // PageView 를 사용하면 슬라이드 형태로 페이지를 나눌 수 있음.
-      body: [
-        PostList(
-            postData: postData,
-            photoURL: photoURL,
-            getPostList: getPostList,
-            parentLoading: parentLoading),
-        const shop.Shop(),
-        isLogin ? const myinfo.MyInfo() : const regester.Regester()
-      ][tabIndex],
+      body: RefreshIndicator(
+        key: _refreshIndicatorKey,
+        onRefresh: getPostList,
+        child: [
+          PostList(
+              postData: postData,
+              photoURL: photoURL,
+              getPostList: addPostList,
+              parentLoading: parentLoading),
+          const shop.Shop(),
+          isLogin ? const myinfo.MyInfo() : const regester.Regester()
+        ][tabIndex],
+      ),
       bottomNavigationBar: BottomNavigationBar(
         showSelectedLabels: false,
         showUnselectedLabels: false,
@@ -324,6 +335,45 @@ class _PostListState extends State<PostList> {
     });
   }
 
+  deleteMainPost(post) {
+    // 게시물을 삭제할 건 물어본 후 게시물과 이미지 삭제
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: const Text('게시물 삭제'),
+          content: const Text('게시물을 삭제하시겠습니까?'),
+          actions: [
+            TextButton(
+              child: const Text('취소'),
+              onPressed: () {
+                Navigator.pop(context);
+              },
+            ),
+            TextButton(
+              child: const Text('삭제'),
+              onPressed: () async {
+                final Reference imageRef =
+                    FirebaseStorage.instance.refFromURL(post['contentImage']);
+
+                await imageRef.delete();
+                await _store.collection('mainPosts').doc(post!.id).delete();
+                await showNotification(0, '게시물 삭제 완료', '게시물이 정상적으로 삭제됐습니다.');
+
+                // 삭제가 완료됐다면 화면 갱신
+                setState(() {
+                  widget.postData.remove(post);
+                  Navigator.pop(dialogContext);
+                  Navigator.pop(context);
+                });
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   void initState() {
     super.initState();
@@ -344,17 +394,69 @@ class _PostListState extends State<PostList> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.only(bottom: 10, left: 10),
-                    child: Title(
-                        color: const Color(0xff000000),
-                        child: Text(
-                          widget.postData[idx]['title'],
-                          style: const TextStyle(
-                              color: Colors.black,
-                              fontSize: 25,
-                              fontWeight: FontWeight.bold),
-                        )),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 10),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        SizedBox(
+                          child: Title(
+                              color: const Color(0xff000000),
+                              child: Text(
+                                widget.postData[idx]['title'],
+                                style: const TextStyle(
+                                    color: Colors.black,
+                                    fontSize: 25,
+                                    fontWeight: FontWeight.bold),
+                              )),
+                        ),
+                        widget.postData[idx]['writerId'] ==
+                                _auth.currentUser?.uid
+                            ? SizedBox(
+                                // 게시물 삭제/수정 버튼 추가
+                                child: IconButton(
+                                  icon: const Icon(Icons.more_vert),
+                                  onPressed: () {
+                                    showModalBottomSheet(
+                                      context: context,
+                                      builder: (BuildContext context) {
+                                        return Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            ListTile(
+                                              leading: const Icon(Icons.edit),
+                                              title: const Text('수정'),
+                                              onTap: () {
+                                                Navigator.push(
+                                                  context,
+                                                  MaterialPageRoute(
+                                                    builder: (context) =>
+                                                        PostUpload(
+                                                            propsData: widget
+                                                                .postData[idx]),
+                                                  ),
+                                                );
+                                              },
+                                            ),
+                                            ListTile(
+                                              leading: const Icon(Icons.delete),
+                                              title: const Text('삭제'),
+                                              onTap: () {
+                                                deleteMainPost(
+                                                    widget.postData[idx]);
+                                              },
+                                            ),
+                                          ],
+                                        );
+                                      },
+                                    );
+                                  },
+                                ),
+                              )
+                            : const SizedBox(),
+                      ],
+                    ),
                   ),
                   widget.postData[idx]['contentImage'] != null &&
                           widget.postData[idx]['contentImage'] != ''
@@ -385,9 +487,11 @@ class _PostListState extends State<PostList> {
                                           fit: BoxFit.cover,
                                         )),
                                   ),
-                                  Text(widget.postData[idx]["writer"],
-                                      style: const TextStyle(
-                                          color: Colors.black, fontSize: 16)),
+                                  SizedBox(
+                                    child: Text(widget.postData[idx]["writer"],
+                                        style: const TextStyle(
+                                            color: Colors.black, fontSize: 16)),
+                                  ),
                                 ],
                               ),
                               onTap: () {
@@ -420,6 +524,8 @@ class _PostListState extends State<PostList> {
                           ],
                         ),
                         Container(
+                          constraints: const BoxConstraints(minHeight: 80),
+                          alignment: Alignment.centerLeft,
                           margin: const EdgeInsets.only(top: 15),
                           child: Text('${widget.postData[idx]["content"]}',
                               style: const TextStyle(

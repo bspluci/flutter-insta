@@ -31,7 +31,7 @@ class _ShopState extends State<Shop> {
 
   Future<void> _fetchData() async {
     try {
-      final result = await FirebaseFirestore.instance
+      final result = await firestore
           .collection('product')
           .orderBy('createdAt', descending: false)
           .get();
@@ -47,7 +47,7 @@ class _ShopState extends State<Shop> {
   // 선택한 아이템 지우기
   Future<void> _deleteItem(String id) async {
     try {
-      await FirebaseFirestore.instance.collection('product').doc(id).delete();
+      await firestore.collection('product').doc(id).delete();
       await showNotification(3, '삭제 완료', '정상적으로 삭제 완료됐습니다.');
       _fetchData();
     } catch (e) {
@@ -221,7 +221,7 @@ class _AddShopItemState extends State<AddShopItem> {
     }
 
     try {
-      await FirebaseFirestore.instance.collection('product').add({
+      await firestore.collection('product').add({
         'name': name,
         'price': int.parse(priceStr),
         'createdAt': DateTime.now(),
@@ -244,10 +244,7 @@ class _AddShopItemState extends State<AddShopItem> {
     }
 
     try {
-      await FirebaseFirestore.instance
-          .collection('product')
-          .doc(widget.itemData?.id)
-          .update({
+      await firestore.collection('product').doc(widget.itemData?.id).update({
         'name': name,
         'price': int.parse(priceStr),
       });

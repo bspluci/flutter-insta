@@ -15,7 +15,8 @@ final FirebaseAuth _auth = FirebaseAuth.instance;
 
 class PostUpload extends StatefulWidget {
   final dynamic propsData;
-  const PostUpload({Key? key, this.propsData}) : super(key: key);
+  final dynamic editMode;
+  const PostUpload({Key? key, this.propsData, this.editMode}) : super(key: key);
 
   @override
   State<PostUpload> createState() => _PostUploadState();
@@ -29,19 +30,23 @@ class _PostUploadState extends State<PostUpload> {
   bool isUploading = false;
   File? userImage;
   dynamic pickedFile;
-  bool changeImageState = false;
+  bool isEdit = false;
+  bool changeImage = false;
 
   final _titleController = TextEditingController();
   final _contentController = TextEditingController();
 
   setInitData() {
     if (widget.propsData != null) {
-      writerId = widget.propsData['writerId'];
-      writer = widget.propsData['writer'];
-      _titleController.text = widget.propsData['title'];
-      _contentController.text = widget.propsData['content'];
-      contentImage = widget.propsData['contentImage'];
-      like = widget.propsData['like'];
+      writerId = widget.propsData['writerId'] ?? '';
+      writer = widget.propsData['writer'] ?? '';
+      _titleController.text = widget.propsData['title'] ?? '';
+      _contentController.text = widget.propsData['content'] ?? '';
+      contentImage = widget.propsData['contentImage'] ?? '';
+      like = widget.propsData['like'] ?? 0;
+    }
+    if (widget.editMode == true) {
+      isEdit = true;
     }
   }
 
@@ -50,7 +55,7 @@ class _PostUploadState extends State<PostUpload> {
     pickedFile = await picker.pickImage(source: ImageSource.gallery);
     setState(() {
       userImage = File(pickedFile?.path ?? '');
-      changeImageState = true;
+      changeImage = true;
     });
   }
 
@@ -64,12 +69,14 @@ class _PostUploadState extends State<PostUpload> {
     // 게시물 업로드 중임을 표시
     setState(() => isUploading = true);
 
-    if (changeImageState) {
+    if (isEdit == true && changeImage == true) {
       // 이미지 삭제
       final Reference imageRef =
           FirebaseStorage.instance.refFromURL(widget.propsData['contentImage']);
       await imageRef.delete();
+    }
 
+    if (changeImage == true) {
       // 새운 이미지 업로드
       final Reference storageRef = _storage.ref().child(
           'postImages/${DateTime.now()}.${userImage?.path.split('.').last}');
@@ -111,7 +118,8 @@ class _PostUploadState extends State<PostUpload> {
     }
 
     // 로딩바 최소시간 설정
-    changeImageState = false;
+    isEdit = false;
+    changeImage = false;
     await Future.delayed(const Duration(milliseconds: 500));
 
     Navigator.of(context).pushNamed('/');

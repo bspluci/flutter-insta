@@ -22,6 +22,7 @@ import 'user_profile.dart' as userprofile;
 import 'shop.dart' as shop;
 import 'regester.dart' as regester;
 import 'my_info.dart' as myinfo;
+import 'full_screen_image.dart';
 
 final _store = FirebaseFirestore.instance;
 final _auth = FirebaseAuth.instance;
@@ -434,7 +435,8 @@ class _PostListState extends State<PostList> {
                                                     builder: (context) =>
                                                         PostUpload(
                                                             propsData: widget
-                                                                .postData[idx]),
+                                                                .postData[idx],
+                                                            editMode: true),
                                                   ),
                                                 );
                                               },
@@ -460,8 +462,35 @@ class _PostListState extends State<PostList> {
                   ),
                   widget.postData[idx]['contentImage'] != null &&
                           widget.postData[idx]['contentImage'] != ''
-                      ? Image.network(widget.postData[idx]['contentImage'],
-                          height: 300, fit: BoxFit.cover)
+                      ? GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => FullScreenImage(
+                                  imageUrls: [
+                                    widget.postData[idx]['contentImage']
+                                  ],
+                                  initialIndex: 0,
+                                ),
+                              ),
+                            );
+                            // showDialog(
+                            //   context: context,
+                            //   builder: (BuildContext context) {
+                            //     return Dialog(
+                            //       backgroundColor: Colors.green,
+                            //       child: FullScreenImage(
+                            //           imageUrl: widget.postData[idx]
+                            //               ['contentImage']),
+                            //     );
+                            //   },
+                            // );
+                          },
+                          child: Image.network(
+                              widget.postData[idx]['contentImage'],
+                              height: 300,
+                              fit: BoxFit.cover))
                       : const SizedBox(height: 300),
                   Container(
                     padding:

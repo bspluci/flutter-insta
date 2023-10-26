@@ -1,8 +1,6 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -36,6 +34,7 @@ class _PostUploadState extends State<PostUpload> {
   dynamic pickedImage;
   bool isEdit = false;
   bool changeImage = false;
+  dynamic extend;
 
   final _titleController = TextEditingController();
   final _contentController = TextEditingController();
@@ -70,31 +69,45 @@ class _PostUploadState extends State<PostUpload> {
   }
 
   Future<void> selectImage() async {
-    final status = await Permission.storage.request();
+    final ImagePicker picker = ImagePicker();
+    dynamic resizedImage;
+    pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    extend = pickedFile.path.split(".").last;
 
-    if (status.isGranted) {
-      final ImagePicker picker = ImagePicker();
-      pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    if (pickedFile != null && extend != 'gif') {
+      // 이미지를 읽어오고, 원하는 크기로 조절, 이미지 압축
+      final imageFile = img.decodeImage(await pickedFile.readAsBytes());
+      resizedImage = imageFile != null ? resizeImageToMax800(imageFile) : null;
 
-      if (pickedFile != null) {
-        // 이미지를 읽어오고, 원하는 크기로 조절, 이미지 압축
-        final imageFile = img.decodeImage(await pickedFile.readAsBytes());
-        final resizedImage =
-            imageFile != null ? resizeImageToMax800(imageFile) : null;
+      if (resizedImage != null) {
+        // 이미지를 파일로 저장
+        File imageFile = File(pickedFile.path);
 
-        if (resizedImage != null) {
-          // 이미지를 파일로 저장
-          File imageFile = File(pickedFile.path);
-          imageFile.writeAsBytesSync(img.encodeJpg(resizedImage));
-
-          setState(() {
-            pickedImage = resizedImage;
-            showImage = File(pickedFile.path);
-            changeImage = true;
-          });
+        switch (extend) {
+          case 'jpg':
+            imageFile
+                .writeAsBytesSync(img.encodeJpg(resizedImage, quality: 80));
+            break;
+          case 'jpeg':
+            imageFile
+                .writeAsBytesSync(img.encodeJpg(resizedImage, quality: 80));
+            break;
+          case 'png':
+            imageFile.writeAsBytesSync(img.encodePng(resizedImage));
+            break;
+          default:
+            return showNotification(0, '이미지 선택 실패', '지원하지 않는 파일형식입니다.');
         }
       }
+      setState(() {
+        pickedImage = resizedImage;
+      });
     }
+
+    setState(() {
+      showImage = File(pickedFile.path);
+      changeImage = true;
+    });
   }
 
   Future<void> uploadPost(context, postDivi) async {
@@ -114,13 +127,30 @@ class _PostUploadState extends State<PostUpload> {
       await imageRef.delete();
     }
 
-    if (changeImage == true) {
+    if (changeImage == true && extend != 'gif') {
       // 새운 이미지 업로드
       final Reference storageRef = _storage.ref().child(
           'postImages/${DateTime.now()}.${showImage?.path.split('.').last}');
       final compressedImage = img.encodeJpg(pickedImage, quality: 80);
       final UploadTask uploadTask = storageRef.putData(compressedImage);
 
+      await uploadTask.whenComplete(() async {
+        contentImage = await storageRef.getDownloadURL();
+      });
+    } else if (changeImage == true && extend == 'gif') {
+      final Reference storageRef = _storage.ref().child(
+          'postImages/${DateTime.now()}.${showImage?.path.split('.').last}');
+
+      // GIF 파일의 용량 체크
+      final int maxSize = 5 * 1024 * 1024; // 5MB로 제한
+      if (showImage!.lengthSync() > maxSize) {
+        // 용량 초과 시 처리
+        showNotification(1, '파일 용량 초과', 'GIF 파일 용량이 5MB를 초과했습니다.');
+        // 필요한 처리를 추가하십시오 (예: 에러 메시지 표시, 업로드 중단 등)
+        return;
+      }
+
+      final UploadTask uploadTask = storageRef.putFile(showImage as File);
       await uploadTask.whenComplete(() async {
         contentImage = await storageRef.getDownloadURL();
       });

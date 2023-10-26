@@ -1,11 +1,14 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
+import 'package:image/image.dart' as img;
 
 import 'notification.dart';
 import 'provider.dart';
@@ -28,8 +31,9 @@ class _PostUploadState extends State<PostUpload> {
   String contentImage = '';
   int like = 0;
   bool isUploading = false;
-  File? userImage;
+  File? showImage;
   dynamic pickedFile;
+  dynamic pickedImage;
   bool isEdit = false;
   bool changeImage = false;
 
@@ -50,13 +54,47 @@ class _PostUploadState extends State<PostUpload> {
     }
   }
 
+  // 이미지의 가로와 세로 크기를 최대 800 픽셀 중 하나에 맞추고 비율에 맞게 줄이는 함수
+  img.Image resizeImageToMax800(img.Image image) {
+    int newWidth, newHeight;
+
+    if (image.width > image.height) {
+      newWidth = 800;
+      newHeight = (800 * image.height / image.width).round();
+    } else {
+      newHeight = 800;
+      newWidth = (800 * image.width / image.height).round();
+    }
+
+    return img.copyResize(image, width: newWidth, height: newHeight);
+  }
+
   Future<void> selectImage() async {
-    final ImagePicker picker = ImagePicker();
-    pickedFile = await picker.pickImage(source: ImageSource.gallery);
-    setState(() {
-      userImage = File(pickedFile?.path ?? '');
-      changeImage = true;
-    });
+    final status = await Permission.storage.request();
+
+    if (status.isGranted) {
+      final ImagePicker picker = ImagePicker();
+      pickedFile = await picker.pickImage(source: ImageSource.gallery);
+
+      if (pickedFile != null) {
+        // 이미지를 읽어오고, 원하는 크기로 조절, 이미지 압축
+        final imageFile = img.decodeImage(await pickedFile.readAsBytes());
+        final resizedImage =
+            imageFile != null ? resizeImageToMax800(imageFile) : null;
+
+        if (resizedImage != null) {
+          // 이미지를 파일로 저장
+          File imageFile = File(pickedFile.path);
+          imageFile.writeAsBytesSync(img.encodeJpg(resizedImage));
+
+          setState(() {
+            pickedImage = resizedImage;
+            showImage = File(pickedFile.path);
+            changeImage = true;
+          });
+        }
+      }
+    }
   }
 
   Future<void> uploadPost(context, postDivi) async {
@@ -79,8 +117,9 @@ class _PostUploadState extends State<PostUpload> {
     if (changeImage == true) {
       // 새운 이미지 업로드
       final Reference storageRef = _storage.ref().child(
-          'postImages/${DateTime.now()}.${userImage?.path.split('.').last}');
-      final UploadTask uploadTask = storageRef.putFile(File(pickedFile.path));
+          'postImages/${DateTime.now()}.${showImage?.path.split('.').last}');
+      final compressedImage = img.encodeJpg(pickedImage, quality: 80);
+      final UploadTask uploadTask = storageRef.putData(compressedImage);
 
       await uploadTask.whenComplete(() async {
         contentImage = await storageRef.getDownloadURL();
@@ -133,13 +172,13 @@ class _PostUploadState extends State<PostUpload> {
   // };
 
   // bool isUploading = false;
-  // File? userImage;
+  // File? showImage;
   // dynamic pickedFile;
 
   // Future<void> selectImage() async {
   //   final ImagePicker picker = ImagePicker();
   //   pickedFile = await picker.pickImage(source: ImageSource.gallery);
-  //   setState(() => userImage = File(pickedFile?.path ?? ''));
+  //   setState(() => showImage = File(pickedFile?.path ?? ''));
   // }
 
   // uploadPost(context) async {
@@ -157,11 +196,11 @@ class _PostUploadState extends State<PostUpload> {
   //   request.fields['like'] = userPost['like'].toString();
   //   request.fields['content'] = userPost['content'];
 
-  //   if (userImage != null) {
+  //   if (showImage != null) {
   //     request.files.add(
   //       await http.MultipartFile.fromPath(
   //         'image',
-  //         userImage?.path ?? '',
+  //         showImage?.path ?? '',
   //       ),
   //     );
   //   }
@@ -218,9 +257,9 @@ class _PostUploadState extends State<PostUpload> {
                   Center(
                     child: Container(
                       margin: const EdgeInsets.only(top: 20),
-                      child: userImage != null && userImage!.path != ''
+                      child: showImage != null && showImage!.path != ''
                           ? Image.file(
-                              userImage!,
+                              showImage!,
                               fit: BoxFit.cover,
                               height: 250,
                             )

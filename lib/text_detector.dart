@@ -30,7 +30,6 @@ class _TextDetectorState extends State<TextDetector> {
   final ImagePicker _picker = ImagePicker();
   var _script = TextRecognitionScript.latin;
   var _textRecognizer = TextRecognizer(script: TextRecognitionScript.latin);
-  // final _textRecognizer = TextRecognizer(script: TextRecognitionScript.latin);
 
   Future<void> _pickImage() async {
     final pickedImage = await _picker.pickImage(source: ImageSource.gallery);

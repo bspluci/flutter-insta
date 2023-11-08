@@ -89,21 +89,21 @@ class _PostUploadState extends State<PostUpload> {
     setState(() => isUploading = true);
 
     try {
-      // if (isEdit == true && isChange == true) {
-      //   // 이미지 삭제
-      //   final Reference imageRef =
-      //       _storage.refFromURL(widget.propsData['contentImage']);
-      //   Future(() async {
-      //     try {
-      //       await imageRef.delete();
-      //     } catch (e) {
-      //       if (e is FirebaseException &&
-      //           e.code == 'firebase_storage/object-not-found') {
-      //         print('삭제할 이미지가 없습니다.');
-      //       }
-      //     }
-      //   });
-      // }
+      if (isEdit == true && isChange == true) {
+        // 이미지 삭제
+        final Reference imageRef =
+            _storage.refFromURL(widget.propsData['contentImage']);
+        Future(() async {
+          try {
+            await imageRef.delete();
+          } catch (e) {
+            if (e is FirebaseException &&
+                e.code == 'firebase_storage/object-not-found') {
+              showSnackBar(context, '삭제할 이미지가 없습니다.');
+            }
+          }
+        });
+      }
 
       if (isChange && extend != 'gif') {
         // 새운 이미지 업로드

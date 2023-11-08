@@ -61,21 +61,6 @@ class _ShopState extends State<Shop> {
     final store = Provider.of<DataProvider>(context);
 
     return Scaffold(
-      // appBar: AppBar(
-      //   title: const Text('SHOP'),
-      //   automaticallyImplyLeading: false,
-      //   actions: [
-      //     IconButton(
-      //       onPressed: () => Navigator.push(
-      //         context,
-      //         MaterialPageRoute(
-      //             builder: (context) =>
-      //                 AddShopItem(fetchData: _fetchData, itemState: 'ADD')),
-      //       ),
-      //       icon: const Icon(Icons.add),
-      //     ),
-      //   ],
-      // ),
       body: productList == null
           ? const Center(child: CircularProgressIndicator())
           : (productList!.isNotEmpty

@@ -175,10 +175,6 @@ class _RegesterState extends State<Regester> {
                       child: FractionallySizedBox(
                         widthFactor: 0.9,
                         child: TextField(
-                          // decoration: const InputDecoration(
-                          //   border: OutlineInputBorder(),
-                          //   labelText: '비밀번호',
-                          // ),
                           decoration: InputDecoration(
                             border: const OutlineInputBorder(),
                             labelText: '비밀번호',
@@ -210,10 +206,6 @@ class _RegesterState extends State<Regester> {
                       child: FractionallySizedBox(
                         widthFactor: 0.9,
                         child: TextField(
-                          // decoration: const InputDecoration(
-                          //   border: OutlineInputBorder(),
-                          //   labelText: '비밀번호 확인',
-                          // ),
                           decoration: InputDecoration(
                             border: const OutlineInputBorder(),
                             labelText: '비밀번호 확인',

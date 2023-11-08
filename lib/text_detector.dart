@@ -469,7 +469,7 @@ class _TextDetectorState extends State<TextDetector> {
         value: _script,
         dropdownColor: Colors.black54,
         iconEnabledColor: Colors.white,
-        padding: EdgeInsets.only(left: 10, right: 10),
+        padding: const EdgeInsets.only(left: 10, right: 10),
         icon: const Icon(Icons.arrow_downward),
         elevation: 16,
         style: const TextStyle(color: Colors.white),

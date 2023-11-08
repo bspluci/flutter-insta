@@ -17,8 +17,6 @@ initNotification(context) async {
       Navigator.of(context).push(MaterialPageRoute(
         builder: (context) => const Shop(),
       ));
-    } else {
-      print('payload: $payload');
     }
   }
 
@@ -102,15 +100,17 @@ showNotificationTime() async {
 }
 
 // 스낵바 알림
-showInvalidInputNotification(BuildContext context, String message) {
+showSnackBar(BuildContext context, String message,
+    {int? time, Function? onPressed}) {
   ScaffoldMessenger.of(context).showSnackBar(
     SnackBar(
-      duration: const Duration(seconds: 5), // 알림이 화면에 표시되는 기간을 지정합니다.
+      duration: Duration(seconds: time ?? 3), // 알림이 화면에 표시되는 기간을 지정합니다.
       content: Text(message),
       action: SnackBarAction(
         label: '확인',
         onPressed: () {
           // Some code to undo the change.
+          onPressed ?? ScaffoldMessenger.of(context).hideCurrentSnackBar();
         },
       ),
     ),

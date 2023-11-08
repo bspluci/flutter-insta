@@ -20,7 +20,7 @@ class _UserProfileState extends State<UserProfile> {
   List<dynamic> resultGallery = [];
   bool clickFollower = false;
 
-  getUserInfo() async {
+  getUserInfo(context) async {
     try {
       final result = await firestore
           .collection('members')
@@ -33,17 +33,15 @@ class _UserProfileState extends State<UserProfile> {
         resultUser = getUser;
       });
 
-      await getUserGallery();
-
-      await showNotification(1, '유저 정보 로드 완료', '유저 정보가 성공적으로 로드되었습니다.');
+      await getUserGallery(context);
+      await showSnackBar(context, '유저 정보가 성공적으로 로드되었습니다.');
     } catch (e) {
-      print(e);
-      await showNotification(
-          1, '유저 정보 로드 실패', '유저 정보 로드에 실패하였습니다. 다시 시도해 주세요.');
+      showSnackBar(context, '에러: $e');
+      await showSnackBar(context, '유저 정보 로드에 실패하였습니다. 다시 시도해 주세요.');
     }
   }
 
-  getUserGallery() async {
+  getUserGallery(context) async {
     try {
       final result = await firestore
           .collection('mainPosts')
@@ -55,7 +53,7 @@ class _UserProfileState extends State<UserProfile> {
 
       setState(() => resultGallery = gallery);
     } catch (e) {
-      print(e);
+      showSnackBar(context, '에러: $e');
     }
   }
 
@@ -69,7 +67,7 @@ class _UserProfileState extends State<UserProfile> {
   @override
   void initState() {
     super.initState();
-    getUserInfo();
+    getUserInfo(context);
   }
 
   @override

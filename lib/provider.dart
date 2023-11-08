@@ -1,7 +1,7 @@
+import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/widgets.dart'; // Navigator 클래스를 import
-
+// import 'package:flutter/widgets.dart'; // Navigator 클래스를 import
 import 'notification.dart';
 
 final firestore = FirebaseFirestore.instance;
@@ -37,7 +37,7 @@ class UserProvider extends ChangeNotifier {
 
     _user = null;
 
-    await showNotification(5, '로그아웃 완료', '정상적으로 로그아웃 완료됐습니다.');
+    showSnackBar(context, '로그아웃 완료');
     Navigator.of(context).pushNamed('/');
     notifyListeners();
   }

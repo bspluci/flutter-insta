@@ -24,8 +24,9 @@ import 'regester.dart' as regester;
 import 'my_info.dart' as myinfo;
 import 'full_screen_image.dart';
 
-final _store = FirebaseFirestore.instance;
-final _auth = FirebaseAuth.instance;
+FirebaseStorage _storage = FirebaseStorage.instance;
+FirebaseFirestore _store = FirebaseFirestore.instance;
+FirebaseAuth _auth = FirebaseAuth.instance;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -64,7 +65,6 @@ class _MyAppState extends State<MyApp> {
   int page = 0;
   int tabIndex = 0;
   List<dynamic> postData = [];
-  List<dynamic> photoURL = [];
   bool parentLoading = false;
 
   final GlobalKey<RefreshIndicatorState> _refreshIndicatorKey =
@@ -123,7 +123,7 @@ class _MyAppState extends State<MyApp> {
   //       ? json.decode(response.body)
   //       : {'message': 'not found'};
 
-  //   await showInvalidInputNotification(context,
+  //   await showSnackBar(context,
   //       '통신 실패: ${response.statusCode} ERROR, ${jsonData['message']}');
   // }
 
@@ -134,66 +134,59 @@ class _MyAppState extends State<MyApp> {
 
     int perPage = 3;
     QuerySnapshot result;
-    await Future.delayed(const Duration(seconds: 1));
+    Query query =
+        _store.collection('mainPosts').orderBy('timestamp', descending: true);
+
+    if (divi == 'add' && postData.isNotEmpty) {
+      query = query.startAfterDocument(postData.last).limit(perPage);
+    } else {
+      postData = []; // 초기화
+      query = query.limit(perPage);
+    }
 
     try {
-      if (divi == 'add') {
-        result = await _store
-            .collection('mainPosts')
-            .orderBy('timestamp', descending: true)
-            .startAfterDocument(postData.last)
-            .limit(perPage)
-            .get();
-      } else {
-        postData = [];
-        result = await _store
-            .collection('mainPosts')
-            .orderBy('timestamp', descending: true)
-            .limit(perPage)
-            .get();
-      }
-
-      for (var i = 0; i < result.docs.length; i++) {
-        final currentPhotoURL =
-            await getMatchUserByUid(result.docs[i]['writerId']);
-        photoURL.add(currentPhotoURL);
-      }
-
+      result = await query.get();
       setState(() {
         postData.addAll(result.docs);
       });
     } catch (e) {
-      print(e);
+      SnackBar(
+        content: Text('에러: $e'),
+      );
     }
 
     // savePostListFromSharedPreferences();
-    setState(() => parentLoading = false);
+    setState(() {
+      parentLoading = false;
+    });
   }
 
   addPostList() async {
     await getPostList(divi: 'add');
   }
 
-  getMatchUserByUid(uid) async {
-    final member =
-        await _store.collection('members').where('uid', isEqualTo: uid).get();
-    return member.docs[0].data()['photoURL'];
-  }
-
   void setTitleText() {
     Provider.of<TitleProvider>(context, listen: false).setTitle('HOME');
   }
 
-  void setUserInfoProvider() async {
+  dynamic setUserInfoProvider(context) async {
     final user = _auth.currentUser;
-    final userInfo = UserModel(
-      displayName: user?.displayName,
-      email: user?.email,
-      photoURL: user?.photoURL,
-      uid: user?.uid,
-    );
 
-    Provider.of<UserProvider>(context, listen: false).setUser(userInfo);
+    try {
+      final member = await _store
+          .collection('members')
+          .where('uid', isEqualTo: user!.uid)
+          .get();
+
+      Provider.of<UserProvider>(context, listen: false).setUser(UserModel(
+        uid: member.docs[0]['uid'],
+        displayName: member.docs[0]['displayName'],
+        email: member.docs[0]['email'],
+        photoURL: member.docs[0]['photoURL'],
+      ));
+    } catch (e) {
+      showSnackBar(context, '에러: $e');
+    }
   }
 
   @override
@@ -203,18 +196,17 @@ class _MyAppState extends State<MyApp> {
     requestPermission();
     getPostListFromSharedPreferences();
     Future.delayed(Duration.zero, setTitleText);
-    Future.delayed(Duration.zero, setUserInfoProvider);
+    Future.delayed(Duration.zero, () {
+      setUserInfoProvider(context);
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    final mediaQuery = MediaQuery.of(context).size.width > 640;
+    // final mediaQuery = MediaQuery.of(context).size.width > 640; // 기기 반응형 넓이
     final logout = Provider.of<UserProvider>(context).logout;
     final title = Provider.of<TitleProvider>(context).title;
     bool isLogin = _auth.currentUser != null;
-
-    // 기기 반응형 넓이
-    // print(mediaQuery);
 
     return Scaffold(
       appBar: AppBar(
@@ -258,7 +250,6 @@ class _MyAppState extends State<MyApp> {
         child: [
           PostList(
               postData: postData,
-              photoURL: photoURL,
               getPostList: addPostList,
               parentLoading: parentLoading),
           const shop.Shop(),
@@ -294,14 +285,12 @@ class _MyAppState extends State<MyApp> {
 
 class PostList extends StatefulWidget {
   final List<dynamic> postData;
-  final List<dynamic> photoURL;
   final dynamic getPostList;
   final bool parentLoading;
 
   const PostList({
     Key? key,
     required this.postData,
-    required this.photoURL,
     required this.getPostList,
     required this.parentLoading,
   }) : super(key: key);
@@ -336,7 +325,7 @@ class _PostListState extends State<PostList> {
     });
   }
 
-  deleteMainPost(post) {
+  deleteMainPost(context, post, idx) {
     // 게시물을 삭제할 건 물어본 후 게시물과 이미지 삭제
     showDialog(
       context: context,
@@ -355,16 +344,15 @@ class _PostListState extends State<PostList> {
               child: const Text('삭제'),
               onPressed: () async {
                 final Reference imageRef =
-                    FirebaseStorage.instance.refFromURL(post['contentImage']);
+                    _storage.refFromURL(post['contentImage']);
 
                 await imageRef.delete();
                 await _store.collection('mainPosts').doc(post!.id).delete();
-                await showNotification(0, '게시물 삭제 완료', '게시물이 정상적으로 삭제됐습니다.');
+                showSnackBar(context, '게시물이 정상적으로 삭제됐습니다.');
 
                 // 삭제가 완료됐다면 화면 갱신
                 setState(() {
                   widget.postData.remove(post);
-                  Navigator.pop(dialogContext);
                   Navigator.pop(context);
                 });
               },
@@ -373,6 +361,16 @@ class _PostListState extends State<PostList> {
         );
       },
     );
+  }
+
+  getCurrentUserData(userId) async {
+    final currentUserInfo = await _store
+        .collection('members')
+        .where('uid', isEqualTo: userId)
+        .get()
+        .then((value) => value.docs.first.data());
+
+    return currentUserInfo;
   }
 
   @override
@@ -445,8 +443,8 @@ class _PostListState extends State<PostList> {
                                               leading: const Icon(Icons.delete),
                                               title: const Text('삭제'),
                                               onTap: () {
-                                                deleteMainPost(
-                                                    widget.postData[idx]);
+                                                deleteMainPost(context,
+                                                    widget.postData[idx], idx);
                                               },
                                             ),
                                           ],
@@ -488,9 +486,13 @@ class _PostListState extends State<PostList> {
                             // );
                           },
                           child: Image.network(
-                              widget.postData[idx]['contentImage'],
-                              height: 300,
-                              fit: BoxFit.cover))
+                            widget.postData[idx]['contentImage'],
+                            height: 300,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Image.asset('assets/default.png');
+                            },
+                          ))
                       : const SizedBox(height: 300),
                   Container(
                     padding:
@@ -502,50 +504,68 @@ class _PostListState extends State<PostList> {
                           crossAxisAlignment: CrossAxisAlignment.center,
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            GestureDetector(
-                              child: Row(
-                                children: [
-                                  Container(
-                                    margin: const EdgeInsets.only(right: 10),
-                                    child: ClipRRect(
-                                        borderRadius: BorderRadius.circular(15),
-                                        child: Image.network(
-                                          widget.photoURL[idx],
-                                          width: 30,
-                                          height: 30,
-                                          fit: BoxFit.cover,
-                                        )),
-                                  ),
-                                  SizedBox(
-                                    child: Text(widget.postData[idx]["writer"],
-                                        style: const TextStyle(
-                                            color: Colors.black, fontSize: 16)),
-                                  ),
-                                ],
-                              ),
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  // PageRouteBuilder(
-                                  //   pageBuilder: (c, a1, a2) =>
-                                  //       const userprofile.UserProfile(),
-                                  //   transitionsBuilder: (c, a1, a2, child) =>
-                                  //       // FadeTransition(opacity: a1, child: child),
-                                  //       SlideTransition(
-                                  //           position: Tween<Offset>(
-                                  //             begin: const Offset(0.1, 0.0),
-                                  //             end: Offset.zero,
-                                  //           ).animate(a1),
-                                  //           child: child),
-                                  //   transitionDuration:
-                                  //       const Duration(milliseconds: 200),
-                                  // ));
-                                  CupertinoPageRoute(
-                                    builder: (c) => userprofile.UserProfile(
-                                        userId: widget.postData[idx]
-                                            ["writerId"]),
-                                  ),
-                                );
+                            FutureBuilder(
+                              future: getCurrentUserData(
+                                  widget.postData[idx]['writerId']),
+                              builder: (context, snapshot) {
+                                if (snapshot.hasError) {
+                                  // 에러 발생 시 에러 메시지를 반환
+                                  return Text('Error: ${snapshot.error}');
+                                } else if (snapshot.hasData) {
+                                  final userInfo =
+                                      snapshot.data as Map<String, dynamic>;
+                                  final writerPhoto = userInfo["photoURL"];
+                                  final writerName = userInfo['displayName'];
+
+                                  return GestureDetector(
+                                    child: Row(
+                                      children: [
+                                        Container(
+                                          margin:
+                                              const EdgeInsets.only(right: 10),
+                                          child: ClipRRect(
+                                            borderRadius:
+                                                BorderRadius.circular(15),
+                                            child: Image.network(
+                                              writerPhoto,
+                                              width: 30,
+                                              height: 30,
+                                              fit: BoxFit.cover,
+                                              errorBuilder:
+                                                  (context, error, stackTrace) {
+                                                return Image.asset(
+                                                    'assets/default.png');
+                                              },
+                                            ),
+                                          ),
+                                        ),
+                                        SizedBox(
+                                          child: Text(
+                                            writerName,
+                                            style: const TextStyle(
+                                              color: Colors.black,
+                                              fontSize: 16,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    onTap: () {
+                                      Navigator.push(
+                                        context,
+                                        CupertinoPageRoute(
+                                          builder: (c) =>
+                                              userprofile.UserProfile(
+                                            userId: widget.postData[idx]
+                                                ["writerId"],
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  );
+                                } else {
+                                  return const Text('No data available.');
+                                }
                               },
                             ),
                             Text('좋아요 ${widget.postData[idx]["like"]}',

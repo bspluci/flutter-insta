@@ -47,10 +47,10 @@ class _RegesterState extends State<Regester> {
 
   Future<dynamic> submitRegester(context) async {
     if (email.isEmpty || password.isEmpty || passwordRe.isEmpty) {
-      return await showInvalidInputNotification(context, "회원정보를 입력해주세요.");
+      return await showSnackBar(context, "회원정보를 입력해주세요.");
     }
     if (password != passwordRe) {
-      return await showInvalidInputNotification(context, "비밀번호가 다릅니다.");
+      return await showSnackBar(context, "비밀번호가 다릅니다.");
     }
 
     // 게시물 업로드 중임을 표시
@@ -65,8 +65,7 @@ class _RegesterState extends State<Regester> {
         image = await storageRef.getDownloadURL();
       });
     } else {
-      image =
-          'https://firebasestorage.googleapis.com/v0/b/fluttergram-f438d.appspot.com/o/userProfileImages%2Fdefault.png?alt=media&token=d2252bec-459d-4d80-912b-bd0eeca41690&_gl=1*u031bs*_ga*MjEzMzgyMzY5LjE2ODk1NTg3Njk.*_ga_CW55HF8NVT*MTY5NjkxMTU4OC4xMjAuMS4xNjk2OTI1MDkxLjMyLjAuMA';
+      image = 'assets/default.png';
     }
 
     // 회원가입
@@ -86,7 +85,7 @@ class _RegesterState extends State<Regester> {
         'follower': 0,
       });
 
-      // await showNotification(0, '회원가입 완료', '회원가입이 완료됐습니다.');
+      await showSnackBar(context, '회원가입이 완료됐습니다.');
       setState(() => isUploading = false);
 
       Navigator.pop(context, true);
@@ -95,13 +94,13 @@ class _RegesterState extends State<Regester> {
       setState(() => isUploading = false);
 
       if (e.code == 'weak-password') {
-        return showInvalidInputNotification(context, '조금 더 강력한 비밀번호를 입력해주세요.');
+        return showSnackBar(context, '조금 더 강력한 비밀번호를 입력해주세요.');
       } else if (e.code == 'email-already-in-use') {
-        return showInvalidInputNotification(context, '이미 사용중인 이메일입니다.');
+        return showSnackBar(context, '이미 사용중인 이메일입니다.');
       }
     } catch (e) {
       setState(() => isUploading = false);
-      print(e);
+      showSnackBar(context, '에러: $e');
     }
 
     await auth.signOut();

@@ -24,12 +24,12 @@ class _ShopState extends State<Shop> {
   @override
   void initState() {
     super.initState();
-    _fetchData(); // 데이터 가져오는 비동기 함수 호출
+    _fetchData(context); // 데이터 가져오는 비동기 함수 호출
 
     Future.delayed(Duration.zero, setTitleText);
   }
 
-  Future<void> _fetchData() async {
+  Future<void> _fetchData(context) async {
     try {
       final result = await firestore
           .collection('product')
@@ -40,18 +40,19 @@ class _ShopState extends State<Shop> {
         productList = result.docs;
       });
     } catch (e) {
-      print(e);
+      showSnackBar(context, '에러: $e');
     }
   }
 
   // 선택한 아이템 지우기
-  Future<void> _deleteItem(String id) async {
+  Future<void> _deleteItem(context, String id) async {
     try {
       await firestore.collection('product').doc(id).delete();
-      await showNotification(3, '삭제 완료', '정상적으로 삭제 완료됐습니다.');
-      _fetchData();
+      await showSnackBar(context, '정상적으로 삭제 완료됐습니다.');
+
+      _fetchData(context);
     } catch (e) {
-      print(e);
+      showSnackBar(context, '에러: $e');
     }
   }
 
@@ -133,7 +134,8 @@ class _ShopState extends State<Shop> {
                               ),
                               IconButton(
                                   onPressed: () {
-                                    _deleteItem(productList![index].id);
+                                    _deleteItem(
+                                        context, productList![index].id);
                                   },
                                   icon: const Icon(Icons.close)),
                             ],
@@ -210,13 +212,13 @@ class _AddShopItemState extends State<AddShopItem> {
     super.dispose();
   }
 
-  Future<void> _addItemData() async {
+  Future<void> _addItemData(context) async {
     final String name = _nameController.text;
     final String priceStr = _priceController.text;
 
     if (int.tryParse(priceStr) == null) {
       // Show a notification for invalid price input
-      await showInvalidInputNotification(context, "aaaaaaaaaa");
+      await showSnackBar(context, "aaaaaaaaaa");
       return;
     }
 
@@ -226,20 +228,21 @@ class _AddShopItemState extends State<AddShopItem> {
         'price': int.parse(priceStr),
         'createdAt': DateTime.now(),
       });
-      await showNotification(4, '아이템 추가 완료', '아이템 추가가 완료됐습니다.');
+      await showSnackBar(context, '아이템 추가가 완료됐습니다.');
+
       widget.fetchData();
     } catch (e) {
-      print(e);
+      showSnackBar(context, '에러: $e');
     }
   }
 
-  Future<void> _editItem() async {
+  Future<void> _editItem(context) async {
     final String name = _nameController.text;
     final String priceStr = _priceController.text;
 
     if (int.tryParse(priceStr) == null) {
       // Show a notification for invalid price input
-      await showInvalidInputNotification(context, "bbbbbbbbbb");
+      await showSnackBar(context, "bbbbbbbbbb");
       return;
     }
 
@@ -248,10 +251,11 @@ class _AddShopItemState extends State<AddShopItem> {
         'name': name,
         'price': int.parse(priceStr),
       });
-      await showNotification(5, '아이템 수정 완료', '아이템 수정이 완료됐습니다.');
+      await showSnackBar(context, '아이템 수정이 완료됐습니다.');
+
       widget.fetchData();
     } catch (e) {
-      print(e);
+      showSnackBar(context, '에러: $e');
     }
   }
 
@@ -303,7 +307,9 @@ class _AddShopItemState extends State<AddShopItem> {
                 child: ElevatedButton(
                   onPressed: () {
                     if (_formKey.currentState!.validate()) {
-                      widget.itemState == 'EDIT' ? _editItem() : _addItemData();
+                      widget.itemState == 'EDIT'
+                          ? _editItem(context)
+                          : _addItemData(context);
                       Navigator.pop(context);
                     }
                   },

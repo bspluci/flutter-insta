@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">bspluci</string>
+    <string name="facebook_app_id">2524638657713819</string>
+    <string name="fb_login_protocol_scheme">fb2524638657713819</string>
+    <string name="facebook_client_token">5a53ae177d70e6aad3109fa1e1a497d9</string>
+</resources>

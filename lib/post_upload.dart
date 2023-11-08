@@ -6,12 +6,16 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter/services.dart';
+import 'package:gif_resize/gif_resize.dart';
 import 'package:image/image.dart' as img;
 
 import 'notification.dart';
 import 'provider.dart';
+import 'image_edit.dart';
 
 final FirebaseStorage _storage = FirebaseStorage.instance;
+final FirebaseFirestore _store = FirebaseFirestore.instance;
 final FirebaseAuth _auth = FirebaseAuth.instance;
 
 class PostUpload extends StatefulWidget {
@@ -30,10 +34,10 @@ class _PostUploadState extends State<PostUpload> {
   int like = 0;
   bool isUploading = false;
   File? showImage;
-  dynamic pickedFile;
+  XFile? pickedFile;
   dynamic pickedImage;
   bool isEdit = false;
-  bool changeImage = false;
+  bool isChange = false;
   dynamic extend;
 
   final _titleController = TextEditingController();
@@ -41,72 +45,36 @@ class _PostUploadState extends State<PostUpload> {
 
   setInitData() {
     if (widget.propsData != null) {
-      writerId = widget.propsData['writerId'] ?? '';
-      writer = widget.propsData['writer'] ?? '';
-      _titleController.text = widget.propsData['title'] ?? '';
-      _contentController.text = widget.propsData['content'] ?? '';
-      contentImage = widget.propsData['contentImage'] ?? '';
-      like = widget.propsData['like'] ?? 0;
-    }
-    if (widget.editMode == true) {
-      isEdit = true;
-    }
-  }
-
-  // 이미지의 가로와 세로 크기를 최대 800 픽셀 중 하나에 맞추고 비율에 맞게 줄이는 함수
-  img.Image resizeImageToMax800(img.Image image) {
-    int newWidth, newHeight;
-
-    if (image.width > image.height) {
-      newWidth = 800;
-      newHeight = (800 * image.height / image.width).round();
-    } else {
-      newHeight = 800;
-      newWidth = (800 * image.width / image.height).round();
-    }
-
-    return img.copyResize(image, width: newWidth, height: newHeight);
-  }
-
-  Future<void> selectImage() async {
-    final ImagePicker picker = ImagePicker();
-    dynamic resizedImage;
-    pickedFile = await picker.pickImage(source: ImageSource.gallery);
-    extend = pickedFile.path.split(".").last;
-
-    if (pickedFile != null && extend != 'gif') {
-      // 이미지를 읽어오고, 원하는 크기로 조절, 이미지 압축
-      final imageFile = img.decodeImage(await pickedFile.readAsBytes());
-      resizedImage = imageFile != null ? resizeImageToMax800(imageFile) : null;
-
-      if (resizedImage != null) {
-        // 이미지를 파일로 저장
-        File imageFile = File(pickedFile.path);
-
-        switch (extend) {
-          case 'jpg':
-            imageFile
-                .writeAsBytesSync(img.encodeJpg(resizedImage, quality: 80));
-            break;
-          case 'jpeg':
-            imageFile
-                .writeAsBytesSync(img.encodeJpg(resizedImage, quality: 80));
-            break;
-          case 'png':
-            imageFile.writeAsBytesSync(img.encodePng(resizedImage));
-            break;
-          default:
-            return showNotification(0, '이미지 선택 실패', '지원하지 않는 파일형식입니다.');
-        }
-      }
       setState(() {
-        pickedImage = resizedImage;
+        writerId = widget.propsData['writerId'] ?? '';
+        writer = widget.propsData['writer'] ?? '';
+        _titleController.text = widget.propsData['title'] ?? '';
+        _contentController.text = widget.propsData['content'] ?? '';
+        contentImage = widget.propsData['contentImage'] ?? '';
+        like = widget.propsData['like'] ?? 0;
       });
     }
+    if (widget.editMode == true) {
+      setState(() {
+        isEdit = true;
+      });
+    }
+  }
+
+  selectImage(context) async {
+    final ImagePicker picker = ImagePicker();
+    pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    if (pickedFile == null) return;
+
+    SelectImage selectImage = SelectImage();
+    await selectImage.selectImage(context, pickedFile);
+    final selectImg = selectImage.image;
 
     setState(() {
-      showImage = File(pickedFile.path);
-      changeImage = true;
+      extend = selectImg?.extend;
+      pickedImage = selectImg?.pickedImage;
+      showImage = selectImg?.showImage;
+      isChange = true;
     });
   }
 
@@ -114,52 +82,99 @@ class _PostUploadState extends State<PostUpload> {
     UserModel? user = Provider.of<UserProvider>(context, listen: false).user;
 
     if (_contentController.text.isEmpty || _titleController.text.isEmpty) {
-      return await showInvalidInputNotification(context, "제목과 내용을 입력해주세요.");
+      return await showSnackBar(context, "제목과 내용을 입력해주세요.");
     }
 
     // 게시물 업로드 중임을 표시
     setState(() => isUploading = true);
 
-    if (isEdit == true && changeImage == true) {
-      // 이미지 삭제
-      final Reference imageRef =
-          FirebaseStorage.instance.refFromURL(widget.propsData['contentImage']);
-      await imageRef.delete();
-    }
+    try {
+      // if (isEdit == true && isChange == true) {
+      //   // 이미지 삭제
+      //   final Reference imageRef =
+      //       _storage.refFromURL(widget.propsData['contentImage']);
+      //   Future(() async {
+      //     try {
+      //       await imageRef.delete();
+      //     } catch (e) {
+      //       if (e is FirebaseException &&
+      //           e.code == 'firebase_storage/object-not-found') {
+      //         print('삭제할 이미지가 없습니다.');
+      //       }
+      //     }
+      //   });
+      // }
 
-    if (changeImage == true && extend != 'gif') {
-      // 새운 이미지 업로드
-      final Reference storageRef = _storage.ref().child(
-          'postImages/${DateTime.now()}.${showImage?.path.split('.').last}');
-      final compressedImage = img.encodeJpg(pickedImage, quality: 80);
-      final UploadTask uploadTask = storageRef.putData(compressedImage);
+      if (isChange && extend != 'gif') {
+        // 새운 이미지 업로드
+        final Reference storageRef =
+            _storage.ref().child('postImages/${DateTime.now()}.$extend');
+        final compressedImage = img.encodeJpg(pickedImage, quality: 80);
+        final UploadTask uploadTask = storageRef.putData(compressedImage);
 
-      await uploadTask.whenComplete(() async {
-        contentImage = await storageRef.getDownloadURL();
-      });
-    } else if (changeImage == true && extend == 'gif') {
-      final Reference storageRef = _storage.ref().child(
-          'postImages/${DateTime.now()}.${showImage?.path.split('.').last}');
+        await uploadTask.whenComplete(() async {
+          contentImage = await storageRef.getDownloadURL();
+        });
+      } else if (isChange && extend == 'gif') {
+        // GIF 파일의 용량 체크
+        const int maxSize = 10 * 1024 * 1024; // 5MB로 제한
+        if (showImage!.lengthSync() > maxSize) {
+          // 용량 초과 시 처리
+          await showSnackBar(context, 'GIF 파일 용량이 5MB를 초과했습니다.');
 
-      // GIF 파일의 용량 체크
-      final int maxSize = 5 * 1024 * 1024; // 5MB로 제한
-      if (showImage!.lengthSync() > maxSize) {
-        // 용량 초과 시 처리
-        showNotification(1, '파일 용량 초과', 'GIF 파일 용량이 5MB를 초과했습니다.');
-        // 필요한 처리를 추가하십시오 (예: 에러 메시지 표시, 업로드 중단 등)
-        return;
+          setState(() {
+            isEdit = false;
+            isChange = false;
+            isUploading = false;
+            showImage = null;
+          });
+          return;
+        }
+
+        Uint8List? dataImage;
+        final gifResizePlugin = GifResize();
+        final fileSize = img.decodeImage(await pickedFile!.readAsBytes());
+        final gifWidth = fileSize!.width;
+        final gifheight = fileSize.height;
+
+        File imageFile = File(pickedFile!.path);
+        List<int> imageBytes = imageFile.readAsBytesSync();
+        ByteData byteData =
+            ByteData.sublistView(Uint8List.fromList(imageBytes));
+        Uint8List bytes = byteData.buffer.asUint8List();
+
+        try {
+          await gifResizePlugin.init(h: 200, w: 200);
+
+          if (gifWidth > gifheight) {
+            await gifResizePlugin.setWidth(w: 200);
+            await gifResizePlugin.setHeight(
+                h: (200 * gifheight / gifWidth).round());
+          } else {
+            await gifResizePlugin.setHeight(h: 200);
+            await gifResizePlugin.setWidth(
+                w: (200 * gifWidth / gifheight).round());
+          }
+        } catch (e) {
+          showSnackBar(context, '에러: $e');
+        }
+
+        Uint8List resized = await gifResizePlugin.process(bytes);
+        setState(() {
+          dataImage = resized;
+        });
+
+        final Reference storageRef = _storage.ref().child(
+            'postImages/${DateTime.now()}.${showImage?.path.split('.').last}');
+        final UploadTask uploadTask = storageRef.putData(dataImage!);
+        await uploadTask.whenComplete(() async {
+          contentImage = await storageRef.getDownloadURL();
+        });
       }
 
-      final UploadTask uploadTask = storageRef.putFile(showImage as File);
-      await uploadTask.whenComplete(() async {
-        contentImage = await storageRef.getDownloadURL();
-      });
-    }
-
-    // 파이어스토어에 게시물 업로드
-    try {
+      // 파이어스토어에 게시물 업로드
       if (postDivi == 'Upload') {
-        await FirebaseFirestore.instance.collection('mainPosts').add({
+        await _store.collection('mainPosts').add({
           'contentImage': contentImage,
           'like': like,
           'writerId': user?.uid,
@@ -170,89 +185,33 @@ class _PostUploadState extends State<PostUpload> {
           'timestamp': DateTime.now(),
         });
       } else if (postDivi == 'Update') {
-        await FirebaseFirestore.instance
-            .collection('mainPosts')
-            .doc(widget.propsData?.id)
-            .update({
+        await _store.collection('mainPosts').doc(widget.propsData?.id).update({
           'contentImage': contentImage,
           'title': _titleController.text,
           'content': _contentController.text,
         });
       }
 
-      await showNotification(0, '게시물 업로드 완료', '게시물이 성공적으로 업로드되었습니다.');
+      await showSnackBar(context, '게시물이 성공적으로 업로드되었습니다.');
     } catch (e) {
-      await showNotification(0, '게시물 업로드 실패', '게시물 업로드에 실패하였습니다. 다시 시도해 주세요.');
-      print(e);
+      await showSnackBar(context, '게시물 업로드에 실패하였습니다. 다시 시도해 주세요.');
+
+      showSnackBar(context, '에러: $e');
     }
 
-    // 로딩바 최소시간 설정
-    isEdit = false;
-    changeImage = false;
-    await Future.delayed(const Duration(milliseconds: 500));
+    setState(() {
+      isEdit = false;
+      isChange = false;
+    });
 
+    Navigator.pop(context, true);
     Navigator.of(context).pushNamed('/');
   }
 
-  // Map<String, dynamic> userPost = {
-  //   'memberId': '641422cdafc7faa9f6a674d0',
-  //   'writer': '박정호',
-  //   'title': '',
-  //   'content': '',
-  // };
-
-  // bool isUploading = false;
-  // File? showImage;
-  // dynamic pickedFile;
-
-  // Future<void> selectImage() async {
-  //   final ImagePicker picker = ImagePicker();
-  //   pickedFile = await picker.pickImage(source: ImageSource.gallery);
-  //   setState(() => showImage = File(pickedFile?.path ?? ''));
-  // }
-
-  // uploadPost(context) async {
-  //   final url = Platform.isAndroid
-  //       ? 'http://172.20.59.28:8080'
-  //       : 'http://localhost:8080';
-  //   final request = http.MultipartRequest(
-  //     'post',
-  //     Uri.parse('$url/api/post/uploadPost'),
-  //   );
-
-  //   request.fields['memberId'] = userPost['memberId'];
-  //   request.fields['writer'] = userPost['writer'];
-  //   request.fields['title'] = userPost['title'];
-  //   request.fields['like'] = userPost['like'].toString();
-  //   request.fields['content'] = userPost['content'];
-
-  //   if (showImage != null) {
-  //     request.files.add(
-  //       await http.MultipartFile.fromPath(
-  //         'image',
-  //         showImage?.path ?? '',
-  //       ),
-  //     );
-  //   }
-
-  //   final response = await request.send();
-
-  //   if (response.statusCode == 200) {
-  //     await showNotification(0, '게시물 업로드 완료', '게시물이 성공적으로 업로드되었습니다.');
-  //   } else {
-  //     await showNotification(0, '게시물 업로드 실패', '게시물 업로드에 실패하였습니다. 다시 시도해 주세요.');
-  //   }
-
-  //   // 업로드 후 실행될 로직
-  //   await Future.delayed(const Duration(milliseconds: 500));
-  //   Navigator.pop(context, true);
-  //   Navigator.of(context).pushNamed('/');
-  // }
-
   // 사용자 로그인 체크
-  void chackLogin() {
+  void chackLogin(context) async {
     if (_auth.currentUser == null) {
-      showNotification(0, '로그인 필요', '로그인이 필요한 서비스입니다.');
+      await showSnackBar(context, '로그인이 필요한 서비스입니다.');
       Navigator.of(context).pushNamed('/login');
     }
   }
@@ -261,7 +220,7 @@ class _PostUploadState extends State<PostUpload> {
   void initState() {
     super.initState();
     setInitData();
-    chackLogin();
+    chackLogin(context);
   }
 
   @override
@@ -294,8 +253,14 @@ class _PostUploadState extends State<PostUpload> {
                               height: 250,
                             )
                           : contentImage.isNotEmpty
-                              ? Image.network(contentImage,
-                                  fit: BoxFit.cover, height: 250)
+                              ? Image.network(
+                                  contentImage,
+                                  fit: BoxFit.cover,
+                                  height: 250,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return Image.asset('assets/default.png');
+                                  },
+                                )
                               : const Text('No Image',
                                   style: TextStyle(height: 5)),
                     ),
@@ -304,7 +269,7 @@ class _PostUploadState extends State<PostUpload> {
                     child: Container(
                       margin: const EdgeInsets.only(right: 10),
                       child: ElevatedButton(
-                        onPressed: () => selectImage(),
+                        onPressed: () => selectImage(context),
                         child: const Text('select image'),
                       ),
                     ),

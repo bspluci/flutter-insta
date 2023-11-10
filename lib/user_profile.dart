@@ -36,7 +36,7 @@ class _UserProfileState extends State<UserProfile> {
       await getUserGallery(context);
       await showSnackBar(context, '유저 정보가 성공적으로 로드되었습니다.');
     } catch (e) {
-      showSnackBar(context, '에러: $e');
+      await showSnackBar(context, '에러: $e');
       await showSnackBar(context, '유저 정보 로드에 실패하였습니다. 다시 시도해 주세요.');
     }
   }
@@ -53,7 +53,7 @@ class _UserProfileState extends State<UserProfile> {
 
       setState(() => resultGallery = gallery);
     } catch (e) {
-      showSnackBar(context, '에러: $e');
+      await showSnackBar(context, '에러: $e');
     }
   }
 

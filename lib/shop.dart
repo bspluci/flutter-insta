@@ -40,7 +40,7 @@ class _ShopState extends State<Shop> {
         productList = result.docs;
       });
     } catch (e) {
-      showSnackBar(context, '에러: $e');
+      await showSnackBar(context, '에러: $e');
     }
   }
 
@@ -52,7 +52,7 @@ class _ShopState extends State<Shop> {
 
       _fetchData(context);
     } catch (e) {
-      showSnackBar(context, '에러: $e');
+      await showSnackBar(context, '에러: $e');
     }
   }
 
@@ -217,7 +217,7 @@ class _AddShopItemState extends State<AddShopItem> {
 
       widget.fetchData();
     } catch (e) {
-      showSnackBar(context, '에러: $e');
+      await showSnackBar(context, '에러: $e');
     }
   }
 
@@ -240,7 +240,7 @@ class _AddShopItemState extends State<AddShopItem> {
 
       widget.fetchData();
     } catch (e) {
-      showSnackBar(context, '에러: $e');
+      await showSnackBar(context, '에러: $e');
     }
   }
 

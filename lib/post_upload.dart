@@ -8,6 +8,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter/services.dart';
 import 'package:gif_resize/gif_resize.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:image/image.dart' as img;
 
 import 'notification.dart';
@@ -99,7 +100,7 @@ class _PostUploadState extends State<PostUpload> {
           } catch (e) {
             if (e is FirebaseException &&
                 e.code == 'firebase_storage/object-not-found') {
-              showSnackBar(context, '삭제할 이미지가 없습니다.');
+              await showSnackBar(context, '삭제할 이미지가 없습니다.');
             }
           }
         });
@@ -156,7 +157,7 @@ class _PostUploadState extends State<PostUpload> {
                 w: (200 * gifWidth / gifheight).round());
           }
         } catch (e) {
-          showSnackBar(context, '에러: $e');
+          await showSnackBar(context, '에러: $e');
         }
 
         Uint8List resized = await gifResizePlugin.process(bytes);
@@ -196,7 +197,7 @@ class _PostUploadState extends State<PostUpload> {
     } catch (e) {
       await showSnackBar(context, '게시물 업로드에 실패하였습니다. 다시 시도해 주세요.');
 
-      showSnackBar(context, '에러: $e');
+      await showSnackBar(context, '에러: $e');
     }
 
     setState(() {
@@ -204,15 +205,14 @@ class _PostUploadState extends State<PostUpload> {
       isChange = false;
     });
 
-    Navigator.pop(context, true);
-    Navigator.of(context).pushNamed('/');
+    Navigator.of(context).pushReplacementNamed('/');
   }
 
   // 사용자 로그인 체크
   void chackLogin(context) async {
     if (_auth.currentUser == null) {
       await showSnackBar(context, '로그인이 필요한 서비스입니다.');
-      Navigator.of(context).pushNamed('/login');
+      Navigator.of(context).pushReplacementNamed('/login');
     }
   }
 
@@ -231,7 +231,7 @@ class _PostUploadState extends State<PostUpload> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext buildContext) {
     final postDivi = widget.propsData != null ? 'Update' : 'Upload';
     return Scaffold(
       appBar: AppBar(
@@ -253,13 +253,21 @@ class _PostUploadState extends State<PostUpload> {
                               height: 250,
                             )
                           : contentImage.isNotEmpty
-                              ? Image.network(
-                                  contentImage,
-                                  fit: BoxFit.cover,
+                              ? CachedNetworkImage(
+                                  imageUrl: contentImage,
                                   height: 250,
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return Image.asset('assets/default.png');
+                                  fit: BoxFit.cover,
+                                  progressIndicatorBuilder:
+                                      (context, url, downloadProgress) {
+                                    return SizedBox(
+                                      child: Center(
+                                        child: CircularProgressIndicator(
+                                            value: downloadProgress.progress),
+                                      ),
+                                    );
                                   },
+                                  errorWidget: (context, url, error) =>
+                                      const Icon(Icons.error),
                                 )
                               : const Text('No Image',
                                   style: TextStyle(height: 5)),
@@ -315,7 +323,7 @@ class _PostUploadState extends State<PostUpload> {
                         Container(
                           margin: const EdgeInsets.only(right: 5),
                           child: ElevatedButton(
-                            onPressed: () => uploadPost(context, postDivi),
+                            onPressed: () => uploadPost(buildContext, postDivi),
                             child: Text(postDivi),
                           ),
                         ),

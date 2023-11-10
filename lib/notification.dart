@@ -99,20 +99,20 @@ showNotificationTime() async {
       payload: '');
 }
 
-// 스낵바 알림
-showSnackBar(BuildContext context, String message,
-    {int? time, Function? onPressed}) {
+/// 스낵바 함수, 필수 파라메터로 context 와 문자열이 필요하며 노출 시간과 버튼클릭 함수를 넣을 수 있다.
+Future<void> showSnackBar(BuildContext context, String message,
+    {int? time, Function? onPressed}) async {
   ScaffoldMessenger.of(context).showSnackBar(
     SnackBar(
-      duration: Duration(seconds: time ?? 3), // 알림이 화면에 표시되는 기간을 지정합니다.
+      duration: Duration(seconds: time ?? 2), // 알림이 화면에 표시되는 기간을 지정합니다.
       content: Text(message),
-      action: SnackBarAction(
-        label: '확인',
-        onPressed: () {
-          // Some code to undo the change.
-          onPressed ?? ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        },
-      ),
+      // action: SnackBarAction(
+      //   label: '확인',
+      //   onPressed: () {
+      //     // Some code to undo the change.
+      //     onPressed ?? ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      //   },
+      // ),
     ),
   );
 }

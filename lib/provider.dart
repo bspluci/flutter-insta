@@ -36,8 +36,8 @@ class UserProvider extends ChangeNotifier {
 
     _user = null;
 
-    showSnackBar(context, '로그아웃 완료');
-    Navigator.of(context).pushNamed('/');
+    await showSnackBar(context, '로그아웃 완료');
+    Navigator.of(context).pushReplacementNamed('/');
     notifyListeners();
   }
 }

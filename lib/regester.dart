@@ -88,19 +88,18 @@ class _RegesterState extends State<Regester> {
       await showSnackBar(context, '회원가입이 완료됐습니다.');
       setState(() => isUploading = false);
 
-      Navigator.pop(context, true);
-      Navigator.of(context).pushNamed('/');
+      Navigator.of(context).pushReplacementNamed('/');
     } on FirebaseAuthException catch (e) {
       setState(() => isUploading = false);
 
       if (e.code == 'weak-password') {
-        return showSnackBar(context, '조금 더 강력한 비밀번호를 입력해주세요.');
+        return await showSnackBar(context, '조금 더 강력한 비밀번호를 입력해주세요.');
       } else if (e.code == 'email-already-in-use') {
-        return showSnackBar(context, '이미 사용중인 이메일입니다.');
+        return await showSnackBar(context, '이미 사용중인 이메일입니다.');
       }
     } catch (e) {
       setState(() => isUploading = false);
-      showSnackBar(context, '에러: $e');
+      await showSnackBar(context, '에러: $e');
     }
 
     await auth.signOut();

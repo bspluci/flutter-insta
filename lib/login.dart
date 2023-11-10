@@ -24,10 +24,8 @@ class _LoginState extends State<Login> {
 
   // 로그인 완료 후 홈으로 이동
   loginSuccess(context) async {
-    await showSnackBar(context, '정상적으로 로그인 완료됐습니다.');
     setState(() => isLoading = true);
-    Navigator.pop(context, true);
-    Navigator.of(context).pushNamed('/');
+    Navigator.of(context).pushReplacementNamed('/');
   }
 
   // 페이스북 로인
@@ -56,7 +54,7 @@ class _LoginState extends State<Login> {
 
       loginSuccess(context);
     } catch (e) {
-      showSnackBar(context, '에러: $e');
+      await showSnackBar(context, '에러: $e');
     }
   }
 
@@ -81,7 +79,7 @@ class _LoginState extends State<Login> {
         },
       );
     } on FirebaseAuthException catch (e) {
-      showSnackBar(context, '에러: $e');
+      await showSnackBar(context, '에러: $e');
 
       setState(() => isLoading = false);
     }
@@ -104,7 +102,7 @@ class _LoginState extends State<Login> {
 
       loginSuccess(context);
     } on FirebaseAuthException catch (e) {
-      showSnackBar(context, '에러: $e');
+      await showSnackBar(context, '에러: $e');
       setState(() => isLoading = false);
 
       if (e.code == 'user-not-found') {

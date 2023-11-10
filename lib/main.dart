@@ -5,6 +5,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 import 'firebase_options.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -185,8 +186,22 @@ class _MyAppState extends State<MyApp> {
         photoURL: member.docs[0]['photoURL'],
       ));
     } catch (e) {
-      showSnackBar(context, '에러: $e');
+      await showSnackBar(context, '에러: $e');
     }
+  }
+
+  DateTime? currentBackPressTime;
+  Future<bool> onWillPop() async {
+    DateTime now = DateTime.now();
+
+    if (currentBackPressTime == null ||
+        now.difference(currentBackPressTime!) > const Duration(seconds: 2)) {
+      currentBackPressTime = now;
+      await showSnackBar(context, "'뒤로'버튼을 한 번 더 누르면 종료됩니다.");
+      return Future.value(false);
+    }
+
+    return Future.value(true);
   }
 
   @override
@@ -244,17 +259,20 @@ class _MyAppState extends State<MyApp> {
         ],
       ),
       // PageView 를 사용하면 슬라이드 형태로 페이지를 나눌 수 있음.
-      body: RefreshIndicator(
-        key: _refreshIndicatorKey,
-        onRefresh: getPostList,
-        child: [
-          PostList(
-              postData: postData,
-              getPostList: addPostList,
-              parentLoading: parentLoading),
-          const shop.Shop(),
-          isLogin ? const myinfo.MyInfo() : const regester.Regester()
-        ][tabIndex],
+      body: WillPopScope(
+        onWillPop: onWillPop,
+        child: RefreshIndicator(
+          key: _refreshIndicatorKey,
+          onRefresh: getPostList,
+          child: [
+            PostList(
+                postData: postData,
+                getPostList: addPostList,
+                parentLoading: parentLoading),
+            const shop.Shop(),
+            isLogin ? const myinfo.MyInfo() : const regester.Regester()
+          ][tabIndex],
+        ),
       ),
       bottomNavigationBar: BottomNavigationBar(
         showSelectedLabels: false,
@@ -337,23 +355,28 @@ class _PostListState extends State<PostList> {
             TextButton(
               child: const Text('취소'),
               onPressed: () {
-                Navigator.pop(context);
+                Navigator.pop(dialogContext);
               },
             ),
             TextButton(
               child: const Text('삭제'),
               onPressed: () async {
-                final Reference imageRef =
-                    _storage.refFromURL(post['contentImage']);
+                if (post['contentImage'] != null &&
+                    post['contentImage'].isNotEmpty) {
+                  final Reference imageRef =
+                      _storage.refFromURL(post['contentImage']);
+                  await imageRef.delete();
+                }
 
-                await imageRef.delete();
                 await _store.collection('mainPosts').doc(post!.id).delete();
-                showSnackBar(context, '게시물이 정상적으로 삭제됐습니다.');
+
+                if (!mounted) return;
+                await showSnackBar(dialogContext, '게시물 삭제가 완료됐습니다.');
 
                 // 삭제가 완료됐다면 화면 갱신
                 setState(() {
                   widget.postData.remove(post);
-                  Navigator.pop(context);
+                  Navigator.pop(dialogContext);
                 });
               },
             ),
@@ -406,7 +429,7 @@ class _PostListState extends State<PostList> {
                                 widget.postData[idx]['title'],
                                 style: const TextStyle(
                                     color: Colors.black,
-                                    fontSize: 25,
+                                    fontSize: 22,
                                     fontWeight: FontWeight.bold),
                               )),
                         ),
@@ -427,6 +450,7 @@ class _PostListState extends State<PostList> {
                                               leading: const Icon(Icons.edit),
                                               title: const Text('수정'),
                                               onTap: () {
+                                                Navigator.pop(context);
                                                 Navigator.push(
                                                   context,
                                                   MaterialPageRoute(
@@ -443,6 +467,7 @@ class _PostListState extends State<PostList> {
                                               leading: const Icon(Icons.delete),
                                               title: const Text('삭제'),
                                               onTap: () {
+                                                Navigator.pop(context);
                                                 deleteMainPost(context,
                                                     widget.postData[idx], idx);
                                               },
@@ -458,48 +483,49 @@ class _PostListState extends State<PostList> {
                       ],
                     ),
                   ),
-                  widget.postData[idx]['contentImage'] != null &&
-                          widget.postData[idx]['contentImage'] != ''
-                      ? GestureDetector(
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => FullScreenImage(
-                                  imageUrls: [
-                                    widget.postData[idx]['contentImage']
-                                  ],
-                                  initialIndex: 0,
-                                ),
-                              ),
-                            );
-                            // showDialog(
-                            //   context: context,
-                            //   builder: (BuildContext context) {
-                            //     return Dialog(
-                            //       backgroundColor: Colors.green,
-                            //       child: FullScreenImage(
-                            //           imageUrl: widget.postData[idx]
-                            //               ['contentImage']),
-                            //     );
-                            //   },
-                            // );
-                          },
-                          child: Image.network(
-                            widget.postData[idx]['contentImage'],
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => FullScreenImage(
+                            imageUrls: [widget.postData[idx]['contentImage']],
+                            initialIndex: 0,
+                          ),
+                        ),
+                      );
+                    },
+                    child: widget.postData[idx]['contentImage'].isNotEmpty
+                        ? CachedNetworkImage(
+                            imageUrl: widget.postData[idx]['contentImage'],
                             height: 300,
                             fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) {
-                              return Image.asset('assets/default.png');
+                            progressIndicatorBuilder:
+                                (context, url, downloadProgress) {
+                              return SizedBox(
+                                child: Center(
+                                  child: CircularProgressIndicator(
+                                      value: downloadProgress.progress),
+                                ),
+                              );
                             },
-                          ))
-                      : const SizedBox(height: 300),
+                            errorWidget: (context, url, error) =>
+                                const Icon(Icons.error),
+                          )
+                        : const SizedBox(),
+                  ),
                   Container(
-                    padding:
-                        const EdgeInsets.only(top: 20, left: 20, right: 20),
+                    padding: const EdgeInsets.only(left: 20, right: 20),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        Container(
+                          constraints: const BoxConstraints(minHeight: 80),
+                          alignment: Alignment.centerLeft,
+                          child: Text('${widget.postData[idx]["content"]}',
+                              style: const TextStyle(
+                                  color: Colors.black, fontSize: 20)),
+                        ),
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.center,
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -572,14 +598,6 @@ class _PostListState extends State<PostList> {
                                 style: const TextStyle(color: Colors.black)),
                           ],
                         ),
-                        Container(
-                          constraints: const BoxConstraints(minHeight: 80),
-                          alignment: Alignment.centerLeft,
-                          margin: const EdgeInsets.only(top: 15),
-                          child: Text('${widget.postData[idx]["content"]}',
-                              style: const TextStyle(
-                                  color: Colors.black, fontSize: 20)),
-                        )
                       ],
                     ),
                   ),

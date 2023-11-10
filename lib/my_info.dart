@@ -6,6 +6,8 @@ import 'package:provider/provider.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+
 import 'package:image/image.dart' as img;
 
 import 'notification.dart';
@@ -88,7 +90,7 @@ class _MyInfoState extends State<MyInfo> {
           final existingImageRef = _storage.refFromURL(userProvider!.photoURL!);
           await existingImageRef.delete();
         } catch (e) {
-          showSnackBar(context, '에러: $e');
+          await showSnackBar(context, '에러: $e');
         }
 
         if (pickedFile != null) {
@@ -144,9 +146,9 @@ class _MyInfoState extends State<MyInfo> {
       ));
 
       await showSnackBar(context, '회원정보가 정상적으로 변경됐습니다.');
-      Navigator.of(context).pushNamed('/');
+      Navigator.of(context).pushReplacementNamed('/');
     } catch (e) {
-      showSnackBar(context, '에러: $e');
+      await showSnackBar(context, '에러: $e');
 
       if (e is FirebaseAuthException) {
         if (e.code == 'requires-recent-login') {
@@ -156,7 +158,7 @@ class _MyInfoState extends State<MyInfo> {
           await _auth.signOut();
 
           // 로그인 페이지로 이동
-          Navigator.of(context).pushNamed('/login');
+          Navigator.of(context).pushReplacementNamed('/login');
         } else {
           await showSnackBar(context, '회원정보 변경 중 오류가 발생했습니다. 다시 시도해주세요.');
         }
@@ -210,8 +212,22 @@ class _MyInfoState extends State<MyInfo> {
                             height: 250,
                           )
                         : userInfo['photoURL'].isNotEmpty
-                            ? Image.network(userInfo['photoURL'],
-                                fit: BoxFit.cover, height: 250)
+                            ? CachedNetworkImage(
+                                imageUrl: userInfo['photoURL'],
+                                height: 250,
+                                fit: BoxFit.cover,
+                                progressIndicatorBuilder:
+                                    (context, url, downloadProgress) {
+                                  return SizedBox(
+                                    child: Center(
+                                      child: CircularProgressIndicator(
+                                          value: downloadProgress.progress),
+                                    ),
+                                  );
+                                },
+                                errorWidget: (context, url, error) =>
+                                    const Icon(Icons.error),
+                              )
                             : const Text('No Image',
                                 style: TextStyle(height: 5)),
                   ),

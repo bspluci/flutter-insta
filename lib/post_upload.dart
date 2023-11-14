@@ -33,6 +33,7 @@ class _PostUploadState extends State<PostUpload> {
   String writer = '';
   String contentImage = '';
   int like = 0;
+  List? likedBy = [];
   bool isUploading = false;
   File? showImage;
   XFile? pickedFile;
@@ -53,6 +54,7 @@ class _PostUploadState extends State<PostUpload> {
         _contentController.text = widget.propsData['content'] ?? '';
         contentImage = widget.propsData['contentImage'] ?? '';
         like = widget.propsData['like'] ?? 0;
+        likedBy = widget.propsData['likedBy'] ?? [];
       });
     }
     if (widget.editMode == true) {
@@ -178,6 +180,7 @@ class _PostUploadState extends State<PostUpload> {
         await _store.collection('mainPosts').add({
           'contentImage': contentImage,
           'like': like,
+          'likedBy': likedBy,
           'writerId': user?.uid,
           'writer': user?.displayName,
           'writerPhoto': user?.photoURL,

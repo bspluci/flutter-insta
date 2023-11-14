@@ -594,8 +594,25 @@ class _PostListState extends State<PostList> {
                                 }
                               },
                             ),
-                            Text('좋아요 ${widget.postData[idx]["like"]}',
-                                style: const TextStyle(color: Colors.black)),
+                            Row(
+                              children: [
+                                IconButton(
+                                  icon: const Icon(Icons.favorite_border),
+                                  onPressed: () {
+                                    final post = widget.postData[idx];
+                                    String? uid = _auth.currentUser?.uid;
+                                    final isLiked = widget.postData[idx]
+                                            ['likedBy']
+                                        .contains(uid);
+                                    toggleLike(uid, post.id, post, isLiked);
+                                    widget.getPostList();
+                                  },
+                                ),
+                                Text(' ${widget.postData[idx]["like"]}',
+                                    style: const TextStyle(
+                                        color: Colors.black, fontSize: 20)),
+                              ],
+                            ),
                           ],
                         ),
                       ],
@@ -624,6 +641,22 @@ class _PostListState extends State<PostList> {
               child: Text("게시물이 없습니다."),
             );
     }
+  }
+}
+
+void toggleLike(String? uid, String? postId, dynamic post, bool isLiked) async {
+  if (isLiked) {
+    // 좋아요 취소
+    await _store.collection('mainPosts').doc(postId).update({
+      'like': FieldValue.increment(-1),
+      'likedBy': FieldValue.arrayRemove([uid]),
+    });
+  } else {
+    // 좋아요 추가
+    await _store.collection('mainPosts').doc(postId).update({
+      'like': FieldValue.increment(1),
+      'likedBy': FieldValue.arrayUnion([uid]),
+    });
   }
 }
 

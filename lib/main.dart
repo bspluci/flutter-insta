@@ -12,6 +12,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:kakao_flutter_sdk/kakao_flutter_sdk.dart';
 
 import 'login.dart';
 import 'provider.dart';
@@ -24,6 +25,7 @@ import 'shop.dart' as shop;
 import 'regester.dart' as regester;
 import 'my_info.dart' as myinfo;
 import 'full_screen_image.dart';
+import 'test.dart';
 
 FirebaseStorage _storage = FirebaseStorage.instance;
 FirebaseFirestore _store = FirebaseFirestore.instance;
@@ -31,6 +33,10 @@ FirebaseAuth _auth = FirebaseAuth.instance;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  KakaoSdk.init(
+    nativeAppKey: 'b8d8d9d7d02eaa121e84972c2beac48c',
+  );
+
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
@@ -50,6 +56,7 @@ void main() async {
         '/text': (context) => const TextDetector(),
         '/login': (context) => const Login(),
         '/post/publish': (context) => const PostUpload(propsData: null),
+        '/test': (context) => const Test(),
       },
     ),
   ));
@@ -172,11 +179,13 @@ class _MyAppState extends State<MyApp> {
 
   dynamic setUserInfoProvider(context) async {
     final user = _auth.currentUser;
+    final userProvider = Provider.of<UserProvider>(context, listen: false).user;
+    if (user == null || userProvider != null) return;
 
     try {
       final member = await _store
           .collection('members')
-          .where('uid', isEqualTo: user!.uid)
+          .where('uid', isEqualTo: user.uid)
           .get();
 
       Provider.of<UserProvider>(context, listen: false).setUser(UserModel(
@@ -185,6 +194,9 @@ class _MyAppState extends State<MyApp> {
         email: member.docs[0]['email'],
         photoURL: member.docs[0]['photoURL'],
       ));
+
+      await showSnackBar(
+          context, '${member.docs[0]['displayName']} 회원님 로그인이 완료되었습니다.');
     } catch (e) {
       await showSnackBar(context, '에러: $e');
     }
@@ -230,6 +242,13 @@ class _MyAppState extends State<MyApp> {
         automaticallyImplyLeading: false,
         title: Text(title),
         actions: [
+          IconButton(
+            iconSize: 25,
+            icon: const Icon(Icons.question_mark_outlined),
+            onPressed: () {
+              Navigator.pushNamed(context, '/test');
+            },
+          ),
           IconButton(
             iconSize: 25,
             icon: Icon(isLogin ? Icons.logout : Icons.login),

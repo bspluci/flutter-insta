@@ -1,8 +1,13 @@
+import 'dart:convert';
+import 'package:flutter/services.dart';
+
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:kakao_flutter_sdk/kakao_flutter_sdk.dart' as kakao;
 
 import 'notification.dart';
 
@@ -28,10 +33,66 @@ class _LoginState extends State<Login> {
     Navigator.of(context).pushReplacementNamed('/');
   }
 
+  Future<void> signInWithKakao(context) async {
+    setState(() => isLoading = true);
+    Map<String, dynamic> firebaseAuthDataSource;
+    // 카카오톡 실행 가능 여부 확인
+    // 카카오톡 실행이 가능하면 카카오톡으로 로그인, 아니면 카카오계정으로 로그인
+    try {
+      kakao.OAuthToken token = await kakao.isKakaoTalkInstalled()
+          ? await kakao.UserApi.instance.loginWithKakaoTalk()
+          : await kakao.UserApi.instance.loginWithKakaoAccount();
+      final kakao.User kakaoUser = await kakao.UserApi.instance.me();
+
+      firebaseAuthDataSource = ({
+        'uid': kakaoUser.id.toString(),
+        'displayName': kakaoUser.kakaoAccount!.profile!.nickname,
+        'email': kakaoUser.kakaoAccount!.email,
+        'photoURL': kakaoUser.kakaoAccount!.profile!.profileImageUrl,
+        'token': token.accessToken,
+        'provider': 'kakao',
+      });
+
+      String url = 'https://createcustomtoken-q76gx7it5q-uc.a.run.app';
+      final firebaseToken =
+          await http.post(Uri.parse(url), body: firebaseAuthDataSource);
+
+      await _auth.signInWithCustomToken(jsonEncode(firebaseToken.body));
+
+      final user = _auth.currentUser;
+      if (user != null) {
+        await _store.collection('members').doc(user.uid).set({
+          'uid': user.uid,
+          'displayName': user.displayName ?? '', // 사용자 이름
+          'email': user.email ?? '', // 사용자 이메일
+          'photoURL': user.photoURL ?? '', // 프로필 사진 URL
+          // 추가 정보 추가 가능
+        });
+      }
+
+      loginSuccess(context);
+    } catch (error) {
+      if (error is PlatformException && error.code == 'CANCELED') {
+        await showSnackBar(context, '로그인 취소: 카카오 로그인을 취소하였습니다.');
+        setState(() => isLoading = false);
+        return;
+      }
+      setState(() => isLoading = false);
+      await showSnackBar(context, '에러: $error');
+    }
+  }
+
   // 페이스북 로인
   Future<void> signInWithFacebook(context) async {
+    setState(() => isLoading = true);
     // Trigger the sign-in flow
     final LoginResult loginResult = await FacebookAuth.instance.login();
+
+    if (loginResult.accessToken == null) {
+      await showSnackBar(context, '로그인 취소: 페이스북 로그인을 취소하였습니다.');
+      setState(() => isLoading = false);
+      return;
+    }
 
     // Create a credential from the access token
     final OAuthCredential facebookAuthCredential =
@@ -40,7 +101,7 @@ class _LoginState extends State<Login> {
     // Once signed in, return the UserCredential
     try {
       await _auth.signInWithCredential(facebookAuthCredential);
-      User? user = _auth.currentUser;
+      final user = _auth.currentUser;
 
       if (user != null) {
         await _store.collection('members').doc(user.uid).set({
@@ -55,6 +116,7 @@ class _LoginState extends State<Login> {
       loginSuccess(context);
     } catch (e) {
       await showSnackBar(context, '에러: $e');
+      setState(() => isLoading = false);
     }
   }
 
@@ -236,7 +298,7 @@ class _LoginState extends State<Login> {
                         SizedBox(
                           width: 170,
                           child: ElevatedButton(
-                            onPressed: () => signInWithGoogle(context),
+                            onPressed: () => signInWithKakao(context),
                             child: const Text('카카오 로그인'),
                           ),
                         ),

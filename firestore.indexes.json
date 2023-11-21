@@ -1,0 +1,19 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "mainPosts",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "writerId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "timestamp",
+          "order": "DESCENDING"
+        }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

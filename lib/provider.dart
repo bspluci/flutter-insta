@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:kakao_flutter_sdk/kakao_flutter_sdk.dart' as kakao;
 import 'notification.dart';
 
 final firestore = FirebaseFirestore.instance;
@@ -32,6 +33,9 @@ class UserProvider extends ChangeNotifier {
   }
 
   logout(context) async {
+    if (_user?.uid?.contains('kakao') == true) {
+      await kakao.UserApi.instance.unlink();
+    }
     await _auth.signOut();
 
     _user = null;

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:kakao_flutter_sdk/kakao_flutter_sdk.dart' as kakao;
+import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart' as kakao;
 import 'notification.dart';
 
 final firestore = FirebaseFirestore.instance;

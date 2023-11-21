@@ -34,7 +34,7 @@ FirebaseAuth _auth = FirebaseAuth.instance;
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   KakaoSdk.init(
-    nativeAppKey: 'b8d8d9d7d02eaa121e84972c2beac48c',
+    nativeAppKey: dotenv.env['KAKAO_APP_KEY'],
   );
 
   await Firebase.initializeApp(

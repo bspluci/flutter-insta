@@ -55,8 +55,8 @@ dependencies:
   google_sign_in: '^6.1.5'
   flutter_facebook_auth: ^5.0.11
   kakao_flutter_sdk: ^1.7.0
-  kakao_flutter_sdk_user: ^1.7.0
-  kakao_flutter_sdk_auth: ^1.7.0
+  # kakao_flutter_sdk_user: ^1.7.0
+  # kakao_flutter_sdk_auth: ^1.7.0
 
 dev_dependencies:
   flutter_test:

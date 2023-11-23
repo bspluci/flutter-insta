@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:provider/provider.dart';
@@ -14,16 +15,16 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart';
 
+import 'style.dart' as style;
 import 'login.dart';
 import 'provider.dart';
 import 'notification.dart';
 import 'post_upload.dart';
 import 'text_detector.dart';
-import 'style.dart' as style;
-import 'user_profile.dart' as userprofile;
-import 'shop.dart' as shop;
-import 'regester.dart' as regester;
-import 'my_info.dart' as myinfo;
+import 'user_profile.dart';
+import 'shop.dart';
+import 'regester.dart';
+import 'my_info.dart';
 import 'full_screen_image.dart';
 import 'test.dart';
 
@@ -32,6 +33,8 @@ FirebaseFirestore _store = FirebaseFirestore.instance;
 FirebaseAuth _auth = FirebaseAuth.instance;
 
 void main() async {
+  await dotenv.load(fileName: ".env");
+
   WidgetsFlutterBinding.ensureInitialized();
   KakaoSdk.init(
     nativeAppKey: dotenv.env['KAKAO_APP_KEY'],
@@ -40,7 +43,6 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  await dotenv.load(fileName: ".env");
 
   runApp(MultiProvider(
     providers: [
@@ -210,9 +212,11 @@ class _MyAppState extends State<MyApp> {
         now.difference(currentBackPressTime!) > const Duration(seconds: 2)) {
       currentBackPressTime = now;
       await showSnackBar(context, "'뒤로'버튼을 한 번 더 누르면 종료됩니다.");
+
       return Future.value(false);
     }
 
+    SystemNavigator.pop();
     return Future.value(true);
   }
 
@@ -288,8 +292,8 @@ class _MyAppState extends State<MyApp> {
                 postData: postData,
                 getPostList: addPostList,
                 parentLoading: parentLoading),
-            const shop.Shop(),
-            isLogin ? const myinfo.MyInfo() : const regester.Regester()
+            const Shop(),
+            isLogin ? const MyInfo() : const Regester()
           ][tabIndex],
         ),
       ),
@@ -599,8 +603,7 @@ class _PostListState extends State<PostList> {
                                       Navigator.push(
                                         context,
                                         CupertinoPageRoute(
-                                          builder: (c) =>
-                                              userprofile.UserProfile(
+                                          builder: (c) => UserProfile(
                                             userId: widget.postData[idx]
                                                 ["writerId"],
                                           ),

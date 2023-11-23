@@ -208,7 +208,7 @@ class _PostUploadState extends State<PostUpload> {
       isChange = false;
     });
 
-    Navigator.of(context).pushReplacementNamed('/');
+    Navigator.pop(context);
   }
 
   // 사용자 로그인 체크
@@ -222,15 +222,15 @@ class _PostUploadState extends State<PostUpload> {
   @override
   void initState() {
     super.initState();
-    setInitData();
     chackLogin(context);
+    setInitData();
   }
 
   @override
   void dispose() {
+    super.dispose();
     _titleController.dispose();
     _contentController.dispose();
-    super.dispose();
   }
 
   @override

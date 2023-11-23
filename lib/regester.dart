@@ -88,7 +88,7 @@ class _RegesterState extends State<Regester> {
       await showSnackBar(context, '회원가입이 완료됐습니다.');
       setState(() => isUploading = false);
 
-      Navigator.of(context).pushReplacementNamed('/');
+      Navigator.pop(context);
     } on FirebaseAuthException catch (e) {
       setState(() => isUploading = false);
 

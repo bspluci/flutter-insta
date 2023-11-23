@@ -81,7 +81,7 @@ class _MyInfoState extends State<MyInfo> {
   void updateMemberInfo(context) async {
     setState(() => isLoading = true);
 
-    final currentUser = _auth.currentUser;
+    User? currentUser = _auth.currentUser;
 
     try {
       // 기존 이미지 파일 삭제
@@ -136,7 +136,7 @@ class _MyInfoState extends State<MyInfo> {
         'follower': 0,
       });
 
-      await currentUser?.reload();
+      currentUser = _auth.currentUser;
 
       Provider.of<UserProvider>(context, listen: false).setUser(UserModel(
         uid: currentUser?.uid,

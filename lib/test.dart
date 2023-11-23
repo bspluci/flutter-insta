@@ -1,15 +1,15 @@
-import 'dart:convert';
+// import 'dart:convert';
 import 'package:flutter/material.dart';
 
-import 'firebase_options.dart';
-import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
+// import 'firebase_options.dart';
+// import 'package:firebase_core/firebase_core.dart';
+// import 'package:firebase_auth/firebase_auth.dart';
+// import 'package:cloud_firestore/cloud_firestore.dart';
+// import 'package:firebase_storage/firebase_storage.dart';
 
-FirebaseStorage _storage = FirebaseStorage.instance;
-FirebaseFirestore _store = FirebaseFirestore.instance;
-FirebaseAuth _auth = FirebaseAuth.instance;
+// FirebaseStorage _storage = FirebaseStorage.instance;
+// FirebaseFirestore _store = FirebaseFirestore.instance;
+// FirebaseAuth _auth = FirebaseAuth.instance;
 
 class Test extends StatefulWidget {
   const Test({super.key});
@@ -19,9 +19,7 @@ class Test extends StatefulWidget {
 }
 
 class _TestState extends State<Test> {
-  _init() {
-    print('hello');
-  }
+  _init() {}
 
   @override
   void initState() {

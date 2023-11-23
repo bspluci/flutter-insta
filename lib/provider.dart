@@ -33,15 +33,19 @@ class UserProvider extends ChangeNotifier {
   }
 
   logout(context) async {
-    if (_user?.uid?.contains('kakao') == true) {
-      await kakao.UserApi.instance.unlink();
-    }
     await _auth.signOut();
-
+    if (_user?.uid?.contains('kakao') == true) {
+      try {
+        await kakao.UserApi.instance.unlink();
+      } catch (e) {
+        showSnackBar(context, '카카오 로그인 정보가 없습니다.');
+      }
+    }
     _user = null;
-
     await showSnackBar(context, '로그아웃 완료');
+
     Navigator.of(context).pushReplacementNamed('/');
+
     notifyListeners();
   }
 }

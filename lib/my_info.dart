@@ -211,25 +211,23 @@ class _MyInfoState extends State<MyInfo> {
                             fit: BoxFit.cover,
                             height: 250,
                           )
-                        : userInfo['photoURL'].isNotEmpty
-                            ? CachedNetworkImage(
-                                imageUrl: userInfo['photoURL'],
-                                height: 250,
-                                fit: BoxFit.cover,
-                                progressIndicatorBuilder:
-                                    (context, url, downloadProgress) {
-                                  return SizedBox(
-                                    child: Center(
-                                      child: CircularProgressIndicator(
-                                          value: downloadProgress.progress),
-                                    ),
-                                  );
-                                },
-                                errorWidget: (context, url, error) =>
-                                    const Icon(Icons.error),
-                              )
-                            : const Text('No Image',
+                        : CachedNetworkImage(
+                            imageUrl: userInfo['photoURL'],
+                            height: 250,
+                            fit: BoxFit.cover,
+                            progressIndicatorBuilder:
+                                (context, url, downloadProgress) {
+                              return SizedBox(
+                                child: Center(
+                                  child: CircularProgressIndicator(
+                                      value: downloadProgress.progress),
+                                ),
+                              );
+                            },
+                            errorWidget: (context, url, error) => const Text(
+                                'No Image',
                                 style: TextStyle(height: 5)),
+                          ),
                   ),
                   Center(
                     child: Container(

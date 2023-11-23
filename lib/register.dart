@@ -14,14 +14,14 @@ final FirebaseStorage _storage = FirebaseStorage.instance;
 final FirebaseAuth auth = FirebaseAuth.instance;
 final FirebaseFirestore store = FirebaseFirestore.instance;
 
-class Regester extends StatefulWidget {
-  const Regester({Key? key}) : super(key: key);
+class Register extends StatefulWidget {
+  const Register({Key? key}) : super(key: key);
 
   @override
-  State<Regester> createState() => _RegesterState();
+  State<Register> createState() => _RegisterState();
 }
 
-class _RegesterState extends State<Regester> {
+class _RegisterState extends State<Register> {
   String email = '';
   String password = '';
   String passwordRe = '';
@@ -36,7 +36,7 @@ class _RegesterState extends State<Regester> {
 
   // 앱 바의 제목 변경
   void setTitleText() {
-    Provider.of<TitleProvider>(context, listen: false).setTitle('REGESTER');
+    Provider.of<TitleProvider>(context, listen: false).setTitle('Register');
   }
 
   Future<void> selectImage() async {
@@ -45,7 +45,7 @@ class _RegesterState extends State<Regester> {
     setState(() => userImage = File(pickedFile?.path ?? ''));
   }
 
-  Future<dynamic> submitRegester(context) async {
+  Future<dynamic> submitRegister(context) async {
     if (email.isEmpty || password.isEmpty || passwordRe.isEmpty) {
       return await showSnackBar(context, "회원정보를 입력해주세요.");
     }
@@ -258,18 +258,19 @@ class _RegesterState extends State<Regester> {
                           Container(
                             margin: const EdgeInsets.only(right: 5),
                             child: ElevatedButton(
-                              onPressed: () => submitRegester(context),
+                              onPressed: () => submitRegister(context),
                               child: const Text('회원가입'),
                             ),
                           ),
                           //
-                          Container(
-                            margin: const EdgeInsets.only(left: 5),
-                            child: ElevatedButton(
-                              onPressed: () => Navigator.pop(context),
-                              child: const Text('취소'),
-                            ),
-                          ),
+                          // Container(
+                          //   margin: const EdgeInsets.only(left: 5),
+                          //   child: ElevatedButton(
+                          //     onPressed: () => Navigator.of(context)
+                          //         .pushReplacementNamed('/'),
+                          //     child: const Text('취소'),
+                          //   ),
+                          // ),
                         ],
                       ),
                     ),

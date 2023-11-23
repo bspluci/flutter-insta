@@ -23,7 +23,7 @@ import 'post_upload.dart';
 import 'text_detector.dart';
 import 'user_profile.dart';
 import 'shop.dart';
-import 'regester.dart';
+import 'register.dart';
 import 'my_info.dart';
 import 'full_screen_image.dart';
 import 'test.dart';
@@ -80,7 +80,7 @@ class _MyAppState extends State<MyApp> {
   final GlobalKey<RefreshIndicatorState> _refreshIndicatorKey =
       GlobalKey<RefreshIndicatorState>();
 
-  // SharedPreferences에 postList를 저장하는 함수
+  // SharedPreferences에 postList를 저장하는 함수(미사용)
   savePostListFromSharedPreferences() async {
     final prefs = await SharedPreferences.getInstance();
     prefs.setStringList(
@@ -88,56 +88,7 @@ class _MyAppState extends State<MyApp> {
     prefs.setInt('page', page);
   }
 
-  // sharedPreferences에서 postList를 불러오는 함수
-  getPostListFromSharedPreferences() async {
-    getPostList();
-
-    // SharedPreferences - 캐시에 데이터를 저장해 빠르게 불러올 수 있음
-    // final prefs = await SharedPreferences.getInstance();
-    // // prefs.remove('postData');
-    // // prefs.remove('page');
-    // final savedPostData = prefs.getStringList('postData');
-    // final savedPage = prefs.getInt('page');
-
-    // // 저장된 데이터가 있으면 setState로 상태를 변경
-    // if (savedPostData != null && savedPage != null) {
-    //   setState(() {
-    //     postData = savedPostData.map((post) => json.decode(post)).toList();
-    //     page = savedPage;
-    //   });
-    // } else {
-    //   getPostList();
-    // }
-  }
-
-  // Future<void> getPostList({String? divi}) async {
-  // int itemLimit = 5;
-  // page = page + 1;
-  // final origin = Platform.isAndroid
-  //     ? 'http://172.20.59.28:8080'
-  //     : 'http://localhost:8080';
-  // final url = '$origin/api/post/getAllPostList?limit=$itemLimit&page=$page';
-  // final response = await http.get(
-  //   Uri.parse(url),
-  // );
-
-  // if (response.statusCode == 200) {
-  //   final jsonData = json.decode(response.body);
-  //   await Future.delayed(const Duration(seconds: 1));
-
-  //   setState(() {
-  //     postData = [...postData, ...jsonData['data']];
-  //   });
-  // } else {
-  //   final jsonData = response.statusCode != 404
-  //       ? json.decode(response.body)
-  //       : {'message': 'not found'};
-
-  //   await showSnackBar(context,
-  //       '통신 실패: ${response.statusCode} ERROR, ${jsonData['message']}');
-  // }
-
-  Future<void> getPostList({String? divi}) async {
+  Future<void> getPostList({String? divi, postId}) async {
     setState(() {
       parentLoading = true;
     });
@@ -149,15 +100,31 @@ class _MyAppState extends State<MyApp> {
 
     if (divi == 'add' && postData.isNotEmpty) {
       query = query.startAfterDocument(postData.last).limit(perPage);
-    } else {
+    } else if (divi == null) {
       postData = []; // 초기화
       query = query.limit(perPage);
     }
 
     try {
       result = await query.get();
+
       setState(() {
-        postData.addAll(result.docs);
+        if (divi == 'like') {
+          int index = 0;
+
+          for (QueryDocumentSnapshot newPost in result.docs) {
+            final postIndex =
+                postData.indexWhere((post) => postId == newPost.id);
+
+            if (postIndex != -1) {
+              postData[index] = newPost;
+              break;
+            }
+            index++;
+          }
+        } else {
+          postData.addAll(result.docs);
+        }
       });
     } catch (e) {
       SnackBar(
@@ -165,14 +132,11 @@ class _MyAppState extends State<MyApp> {
       );
     }
 
-    // savePostListFromSharedPreferences();
-    setState(() {
-      parentLoading = false;
-    });
-  }
-
-  addPostList() async {
-    await getPostList(divi: 'add');
+    if (mounted) {
+      setState(() {
+        parentLoading = false;
+      });
+    }
   }
 
   void setTitleText() {
@@ -225,7 +189,7 @@ class _MyAppState extends State<MyApp> {
     super.initState();
     initNotification(context);
     requestPermission();
-    getPostListFromSharedPreferences();
+    getPostList();
     Future.delayed(Duration.zero, setTitleText);
     Future.delayed(Duration.zero, () {
       setUserInfoProvider(context);
@@ -290,10 +254,10 @@ class _MyAppState extends State<MyApp> {
           child: [
             PostList(
                 postData: postData,
-                getPostList: addPostList,
+                getPostList: getPostList,
                 parentLoading: parentLoading),
             const Shop(),
-            isLogin ? const MyInfo() : const Regester()
+            isLogin ? const MyInfo() : const Register()
           ][tabIndex],
         ),
       ),
@@ -316,7 +280,7 @@ class _MyAppState extends State<MyApp> {
           else
             const BottomNavigationBarItem(
               icon: Icon(Icons.person_add_alt_1_outlined),
-              label: 'regester',
+              label: 'register',
             )
         ],
       ),
@@ -357,7 +321,7 @@ class _PostListState extends State<PostList> {
         setState(() {
           isLoading = true;
         });
-        widget.getPostList().then((value) {
+        widget.getPostList(divi: 'add').then((value) {
           setState(() {
             isLoading = false;
           });
@@ -417,6 +381,24 @@ class _PostListState extends State<PostList> {
         .then((value) => value.docs.first.data());
 
     return currentUserInfo;
+  }
+
+  createLikeIcon(List<dynamic> likedBy) {
+    final uid = _auth.currentUser?.uid;
+    final isLiked = likedBy.contains(uid);
+
+    if (isLiked) {
+      return const Icon(Icons.favorite, color: Colors.red);
+    } else {
+      return const Icon(Icons.favorite_border_outlined);
+    }
+  }
+
+  void chackLogin(context) async {
+    if (_auth.currentUser == null) {
+      await showSnackBar(context, '로그인이 필요한 서비스입니다.');
+      Navigator.pushNamed(context, '/login');
+    }
   }
 
   @override
@@ -619,15 +601,17 @@ class _PostListState extends State<PostList> {
                             Row(
                               children: [
                                 IconButton(
-                                  icon: const Icon(Icons.favorite_border),
-                                  onPressed: () {
+                                  icon: createLikeIcon(
+                                      widget.postData[idx]["likedBy"]),
+                                  onPressed: () async {
+                                    chackLogin(context);
                                     final post = widget.postData[idx];
                                     String? uid = _auth.currentUser?.uid;
-                                    final isLiked = widget.postData[idx]
-                                            ['likedBy']
-                                        .contains(uid);
-                                    toggleLike(uid, post.id, post, isLiked);
-                                    widget.getPostList();
+                                    final curPostId =
+                                        await toggleLikeBtn(uid, post);
+                                    widget.getPostList(
+                                        divi: 'like',
+                                        postId: curPostId['postId']);
                                   },
                                 ),
                                 Text(' ${widget.postData[idx]["like"]}',
@@ -645,7 +629,7 @@ class _PostListState extends State<PostList> {
             );
           } else {
             return const Center(
-              child: LoadingCircle(), // 로딩바
+              child: CircularProgressIndicator(),
             );
           }
         },
@@ -657,7 +641,7 @@ class _PostListState extends State<PostList> {
     } else {
       return widget.parentLoading
           ? const Center(
-              child: LoadingCircle(),
+              child: CircularProgressIndicator(),
             )
           : const Center(
               child: Text("게시물이 없습니다."),
@@ -666,35 +650,21 @@ class _PostListState extends State<PostList> {
   }
 }
 
-void toggleLike(String? uid, String? postId, dynamic post, bool isLiked) async {
-  if (isLiked) {
-    // 좋아요 취소
-    await _store.collection('mainPosts').doc(postId).update({
-      'like': FieldValue.increment(-1),
-      'likedBy': FieldValue.arrayRemove([uid]),
-    });
-  } else {
-    // 좋아요 추가
-    await _store.collection('mainPosts').doc(postId).update({
-      'like': FieldValue.increment(1),
-      'likedBy': FieldValue.arrayUnion([uid]),
-    });
-  }
-}
+Future<Map<String, dynamic>> toggleLikeBtn(
+    String? uid, QueryDocumentSnapshot post) async {
+  final DocumentSnapshot postData =
+      await _store.collection('mainPosts').doc(post.id).get();
+  final List<dynamic> likedBy = postData['likedBy'];
+  final bool isLiked = likedBy.contains(uid);
 
-// 로딩바 위젯
-class LoadingCircle extends StatelessWidget {
-  const LoadingCircle({Key? key}) : super(key: key);
+  // 좋아요 버튼을 누른 게시물의 좋아요 수와 좋아요를 누른 사람의 목록을 업데이트
+  post.reference.update({
+    'like': FieldValue.increment(isLiked ? -1 : 1),
+    'likedBy':
+        isLiked ? FieldValue.arrayRemove([uid]) : FieldValue.arrayUnion([uid]),
+  });
 
-  @override
-  Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.only(top: 20, bottom: 20),
-      child: CircularProgressIndicator.adaptive(
-        value: null, // 진행 상태 (0.0 ~ 1.0)를 나타내는 값. null인 경우에는 애니메이션 효과를 나타냄
-        strokeWidth: 5.0, // 인디케이터의 두께
-        valueColor: AlwaysStoppedAnimation<Color>(Colors.blue), // 인디케이터의 색상
-      ),
-    );
-  }
+  return {
+    'postId': post.id,
+  };
 }

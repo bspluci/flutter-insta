@@ -208,7 +208,7 @@ class _PostUploadState extends State<PostUpload> {
       isChange = false;
     });
 
-    Navigator.pop(context, widget.propsData?.id);
+    Navigator.pop(context, postDivi);
   }
 
   // 사용자 로그인 체크

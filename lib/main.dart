@@ -100,9 +100,10 @@ class _MyAppState extends State<MyApp> {
 
     if (divi == 'add' && postData.isNotEmpty) {
       query = query.startAfterDocument(postData.last).limit(perPage);
-    } else if (divi == null) {
+    } else if (divi == null || divi == 'Upload') {
+      int? len = postData.length.toInt();
       postData = []; // 초기화
-      query = query.limit(perPage);
+      query = query.limit(divi == null ? perPage : len);
     }
 
     try {
@@ -235,9 +236,15 @@ class _MyAppState extends State<MyApp> {
           ),
           IconButton(
             icon: const Icon(Icons.add_box_outlined),
-            onPressed: () {
+            onPressed: () async {
               if (isLogin) {
-                Navigator.pushNamed(context, '/post/publish');
+                final uploadPost = await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => const PostUpload()));
+                if (uploadPost == 'Upload') {
+                  getPostList(divi: uploadPost);
+                }
               } else {
                 Navigator.pushNamed(context, '/login');
               }
@@ -467,12 +474,15 @@ class _PostListState extends State<PostList> {
                                                             editMode: true),
                                                   ),
                                                 );
-                                                if (updatedPostId != null) {
+
+                                                if (updatedPostId == 'Update') {
                                                   DocumentSnapshot result =
                                                       await _store
                                                           .collection(
                                                               'mainPosts')
-                                                          .doc(updatedPostId)
+                                                          .doc(widget
+                                                              .postData[idx].id
+                                                              .toString())
                                                           .get();
                                                   setState(() => widget
                                                       .postData[idx] = result);

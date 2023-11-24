@@ -454,9 +454,10 @@ class _PostListState extends State<PostList> {
                                             ListTile(
                                               leading: const Icon(Icons.edit),
                                               title: const Text('수정'),
-                                              onTap: () {
+                                              onTap: () async {
                                                 Navigator.pop(context);
-                                                Navigator.push(
+                                                String? updatedPostId =
+                                                    await Navigator.push(
                                                   context,
                                                   MaterialPageRoute(
                                                     builder: (context) =>
@@ -466,6 +467,16 @@ class _PostListState extends State<PostList> {
                                                             editMode: true),
                                                   ),
                                                 );
+                                                if (updatedPostId != null) {
+                                                  DocumentSnapshot result =
+                                                      await _store
+                                                          .collection(
+                                                              'mainPosts')
+                                                          .doc(updatedPostId)
+                                                          .get();
+                                                  setState(() => widget
+                                                      .postData[idx] = result);
+                                                }
                                               },
                                             ),
                                             ListTile(
@@ -648,23 +659,24 @@ class _PostListState extends State<PostList> {
             );
     }
   }
-}
 
-Future<Map<String, dynamic>> toggleLikeBtn(
-    String? uid, QueryDocumentSnapshot post) async {
-  final DocumentSnapshot postData =
-      await _store.collection('mainPosts').doc(post.id).get();
-  final List<dynamic> likedBy = postData['likedBy'];
-  final bool isLiked = likedBy.contains(uid);
+  Future<Map<String, dynamic>> toggleLikeBtn(
+      String? uid, QueryDocumentSnapshot post) async {
+    final DocumentSnapshot postData =
+        await _store.collection('mainPosts').doc(post.id).get();
+    final List<dynamic> likedBy = postData['likedBy'];
+    final bool isLiked = likedBy.contains(uid);
 
-  // 좋아요 버튼을 누른 게시물의 좋아요 수와 좋아요를 누른 사람의 목록을 업데이트
-  post.reference.update({
-    'like': FieldValue.increment(isLiked ? -1 : 1),
-    'likedBy':
-        isLiked ? FieldValue.arrayRemove([uid]) : FieldValue.arrayUnion([uid]),
-  });
+    // 좋아요 버튼을 누른 게시물의 좋아요 수와 좋아요를 누른 사람의 목록을 업데이트
+    post.reference.update({
+      'like': FieldValue.increment(isLiked ? -1 : 1),
+      'likedBy': isLiked
+          ? FieldValue.arrayRemove([uid])
+          : FieldValue.arrayUnion([uid]),
+    });
 
-  return {
-    'postId': post.id,
-  };
+    return {
+      'postId': post.id,
+    };
+  }
 }

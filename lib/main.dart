@@ -401,10 +401,11 @@ class _PostListState extends State<PostList> {
     }
   }
 
-  void chackLogin(context) async {
+  Future chackLogin(context) async {
     if (_auth.currentUser == null) {
       await showSnackBar(context, '로그인이 필요한 서비스입니다.');
-      Navigator.pushNamed(context, '/login');
+      await Navigator.pushNamed(context, '/login');
+      return false;
     }
   }
 
@@ -625,14 +626,14 @@ class _PostListState extends State<PostList> {
                                   icon: createLikeIcon(
                                       widget.postData[idx]["likedBy"]),
                                   onPressed: () async {
-                                    chackLogin(context);
+                                    bool loggedIn = await chackLogin(context);
+                                    if (!loggedIn) return;
                                     final post = widget.postData[idx];
                                     String? uid = _auth.currentUser?.uid;
                                     final curPostId =
                                         await toggleLikeBtn(uid, post);
                                     widget.getPostList(
-                                        divi: 'like',
-                                        postId: curPostId['postId']);
+                                        divi: 'like', postId: curPostId);
                                   },
                                 ),
                                 Text(' ${widget.postData[idx]["like"]}',
@@ -670,8 +671,7 @@ class _PostListState extends State<PostList> {
     }
   }
 
-  Future<Map<String, dynamic>> toggleLikeBtn(
-      String? uid, QueryDocumentSnapshot post) async {
+  Future<String> toggleLikeBtn(String? uid, QueryDocumentSnapshot post) async {
     final DocumentSnapshot postData =
         await _store.collection('mainPosts').doc(post.id).get();
     final List<dynamic> likedBy = postData['likedBy'];
@@ -685,8 +685,9 @@ class _PostListState extends State<PostList> {
           : FieldValue.arrayUnion([uid]),
     });
 
-    return {
-      'postId': post.id,
-    };
+    // return {
+    //   'postId': post.id,
+    // };
+    return post.id;
   }
 }

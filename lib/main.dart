@@ -26,7 +26,6 @@ import 'shop.dart';
 import 'register.dart';
 import 'my_info.dart';
 import 'full_screen_image.dart';
-import 'test.dart';
 
 FirebaseStorage _storage = FirebaseStorage.instance;
 FirebaseFirestore _store = FirebaseFirestore.instance;
@@ -58,7 +57,6 @@ void main() async {
         '/text': (context) => const TextDetector(),
         '/login': (context) => const Login(),
         '/post/publish': (context) => const PostUpload(propsData: null),
-        '/test': (context) => const Test(),
       },
     ),
   ));
@@ -211,13 +209,6 @@ class _MyAppState extends State<MyApp> {
         automaticallyImplyLeading: false,
         title: Text(title),
         actions: [
-          IconButton(
-            iconSize: 25,
-            icon: const Icon(Icons.question_mark_outlined),
-            onPressed: () {
-              Navigator.pushNamed(context, '/test');
-            },
-          ),
           IconButton(
             iconSize: 25,
             icon: Icon(isLogin ? Icons.logout : Icons.login),
@@ -685,9 +676,6 @@ class _PostListState extends State<PostList> {
           : FieldValue.arrayUnion([uid]),
     });
 
-    // return {
-    //   'postId': post.id,
-    // };
     return post.id;
   }
 }

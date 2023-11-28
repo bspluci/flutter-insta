@@ -398,6 +398,7 @@ class _PostListState extends State<PostList> {
       await Navigator.pushNamed(context, '/login');
       return false;
     }
+    return true;
   }
 
   @override
